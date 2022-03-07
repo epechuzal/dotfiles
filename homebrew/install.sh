@@ -12,4 +12,7 @@ then
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
+echo "  Installing packages from the global Brewfile."
+brew bundle --global
+
 exit 0
