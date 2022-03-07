@@ -17,7 +17,7 @@ install_str_brewfile() {
   exit 0
 }
 
-prompt ' - Install Sharethrough Brewfile? [y/N]'
+prompt " - Install Sharethrough Brewfile? [y/N]"
 read -n 1 action
 
 case "$action" in
