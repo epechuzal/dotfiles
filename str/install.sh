@@ -5,24 +5,14 @@
 # This installs some of the common dependencies needed (or at least desired)
 # using Homebrew.
 
-prompt () {
-  printf "\r  [ \033[0;33m??\033[0m ] $1\n"
+continue_without_install() {
+  echo "  INSTALL_STR_BREWFILE env var is not set. Will not install STR Brewfile."
 }
 
 install_str_brewfile() {
   echo "  Installing packages from the STR Brewfile."
 
   brew bundle --file="$DOTFILESDIR/str/Brewfile"
-
-  exit 0
 }
 
-prompt " - Install Sharethrough Brewfile? [y/N]"
-read -n 1 action
-
-case "$action" in
-  y|Y )
-   install_str_brewfile;;
-  * )
-    exit 0;;
-esac
+[[ -z "$INSTALL_STR_BREWFILE" ]] && continue_without_install || install_str_brewfile
