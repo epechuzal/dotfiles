@@ -7,8 +7,7 @@
 
 set -e
 
-parentDirectory="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd -P)"
-dotfilesDirectory="$(cd "$( dirname "$parentDirectory" )" && pwd -P)"
+dotfilesDirectory="$(dirname "$(dirname "$(readlink -fm "$0")")")"
 
 displayUsageAndExit() {
 	echo "dot -- dotfiles management"
