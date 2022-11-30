@@ -7,7 +7,7 @@
 
 set -e
 
-dotfilesDirectory="$(dirname "$(dirname "$(readlink -fm "$0")")")"
+dotfilesDirectory=~/Workspace/dotfiles
 
 displayUsageAndExit() {
 	echo "dot -- dotfiles management"
