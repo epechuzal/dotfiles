@@ -4,6 +4,7 @@ brew "tfenv"
 brew "pipenv"
 brew "awscli"
 brew "travis"
+brew "openjdk"
 
 cask "snowflake-snowsql"
 cask "ccmenu"
