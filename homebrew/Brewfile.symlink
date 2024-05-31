@@ -1,6 +1,7 @@
 brew "mas"
 brew "jq"
 brew "fastgron"
+brew "gh"
 
 cask "alfred"
 cask "1password"
