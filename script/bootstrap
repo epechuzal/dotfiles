@@ -148,5 +148,19 @@ else
   fail "error installing dependencies"
 fi
 
+# Setup secrets from 1Password
+echo ''
+info 'setting up secrets...'
+if [ -f script/secrets ]; then
+  if ./script/secrets
+  then
+    success "secrets configured"
+  else
+    fail "error setting up secrets"
+  fi
+else
+  info 'no script/secrets found, skipping'
+fi
+
 echo ''
 echo '  All installed!'
