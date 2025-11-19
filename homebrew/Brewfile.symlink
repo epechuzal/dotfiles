@@ -3,6 +3,7 @@ brew "jq"
 brew "fastgron"
 brew "gh"
 brew "wakeonlan"
+brew "ollama"
 
 cask "alfred"
 cask "1password"
