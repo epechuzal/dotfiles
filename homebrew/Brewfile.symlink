@@ -4,6 +4,8 @@ brew "fastgron"
 brew "gh"
 brew "wakeonlan"
 brew "ollama"
+brew "ffmpeg"
+brew "yt-dlp"
 
 cask "alfred"
 cask "1password"
