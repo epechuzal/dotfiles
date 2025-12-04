@@ -6,6 +6,7 @@ brew "wakeonlan"
 brew "ollama"
 brew "ffmpeg"
 brew "yt-dlp"
+brew "whisper-cpp"
 
 cask "alfred"
 cask "1password"
