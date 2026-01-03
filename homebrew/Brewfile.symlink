@@ -1,24 +1,99 @@
-brew "mas"
-brew "jq"
+tap "homebrew/bundle"
+# Bourne-Again SHell, a UNIX command interpreter
+brew "bash"
+# High-performance JSON to GRON converter
 brew "fastgron"
-brew "gh"
-brew "wakeonlan"
-brew "ollama"
+# Play, record, convert, and stream audio and video
 brew "ffmpeg"
-brew "yt-dlp"
+# GitHub command-line tool
+brew "gh"
+# Distributed revision control system
+brew "git"
+# Lightweight and flexible command-line JSON processor
+brew "jq"
+# Mac App Store command-line interface
+brew "mas"
+# Manage multiple Node.js versions
+brew "nvm"
+# Create, run, and share large language models (LLMs)
+brew "ollama", restart_service: :changed
+# Utility that provides fast incremental file transfer
+brew "rsync"
+# Sends magic packets to wake up network-devices
+brew "wakeonlan"
+# Internet file retriever
+brew "wget"
+# Port of OpenAI's Whisper model in C/C++
 brew "whisper-cpp"
-
-cask "alfred"
+# Why is this running?
+brew "witr"
+# Feature-rich command-line audio/video downloader
+brew "yt-dlp"
+# Password manager that keeps all passwords secure behind one password
 cask "1password"
+# Command-line interface for 1Password
 cask "1password-cli"
+# Application launcher and productivity software
+cask "alfred"
+# Tool to flash OS images to SD cards & USB drives
+cask "balenaetcher"
+# Anthropic's official Claude AI desktop app
+cask "claude"
+# Terminal-based AI coding assistant
+cask "claude-code"
+# Tool to run Windows software
+cask "crossover"
+# Voice and text chat software
+cask "discord"
+# App to build and share containerised applications and microservices
 cask "docker-desktop"
-cask "fig"
+# Fork of the DOSBox project
+cask "dosbox-x-app"
+# Web browser
 cask "google-chrome"
-cask "iterm2"
-cask "postman"
-cask "visual-studio-code"
-cask "ticktick"
-cask "tiles"
-cask "whatsapp"
-cask "secretive"
+# Graphically shows disk usage within a file system
+cask "grandperspective"
+# Desktop automation application
 cask "hammerspoon"
+# Terminal emulator as alternative to Apple's Terminal app
+cask "iterm2"
+# Enables an integrated web browser in iTerm2
+cask "itermbrowserplugin"
+# JetBrains tools manager
+cask "jetbrains-toolbox"
+# Privacy-first, open-source platform for knowledge sharing and management
+cask "logseq"
+# WebKit based web browser
+cask "orion"
+# Collaboration platform for API development
+cask "postman"
+# Frontend for emulators, game engines and media players (OpenGL graphics API)
+cask "retroarch"
+# Tool to reverse the direction of scrolling
+cask "scroll-reverser"
+# Store SSH keys in the Secure Enclave
+cask "secretive"
+# Music streaming service
+cask "spotify"
+# Video game digital distribution service
+cask "steam"
+# VPN client for secure internet access and private browsing
+cask "surfshark"
+# Mesh VPN based on WireGuard
+cask "tailscale-app"
+# Native GUI for Homebrew package management
+cask "taphouse"
+# Window manager
+cask "tiles"
+# Virtual machines UI using QEMU
+cask "utm"
+# Open-source code editor
+cask "visual-studio-code"
+# Multimedia player
+cask "vlc"
+# JavaScript IDE
+cask "webstorm"
+# Native desktop client for WhatsApp
+cask "whatsapp"
+# Gecko based web browser
+cask "zen"
