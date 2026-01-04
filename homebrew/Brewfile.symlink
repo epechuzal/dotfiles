@@ -1,6 +1,8 @@
 tap "homebrew/bundle"
 # Bourne-Again SHell, a UNIX command interpreter
 brew "bash"
+# GNU File, Shell, and Text utilities
+brew "coreutils"
 # High-performance JSON to GRON converter
 brew "fastgron"
 # Play, record, convert, and stream audio and video
