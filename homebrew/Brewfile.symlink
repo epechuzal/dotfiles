@@ -53,6 +53,8 @@ cask "docker-desktop"
 cask "dosbox-x-app"
 # Web browser
 cask "google-chrome"
+# GPU-accelerated terminal emulator
+cask "ghostty"
 # Graphically shows disk usage within a file system
 cask "grandperspective"
 # Desktop automation application
