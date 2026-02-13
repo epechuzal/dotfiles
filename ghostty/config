@@ -1,0 +1,23 @@
+# Ghostty terminal configuration
+# Docs: https://ghostty.org/docs/config
+
+# Font (same as previous iTerm setup)
+font-family = MesloLGS Nerd Font Mono
+font-size = 12
+
+# Shell integration
+shell-integration = detect
+shell-integration-features = cursor,sudo,title,ssh-env,ssh-terminfo
+
+# Window behavior
+window-save-state = always
+window-inherit-working-directory = true
+quit-after-last-window-closed = false
+copy-on-select = true
+
+# Quick terminal (quake-style dropdown)
+quick-terminal-position = top
+
+# Keybinds
+keybind = super+d=new_split:right
+keybind = global:ctrl+grave_accent=toggle_quick_terminal
