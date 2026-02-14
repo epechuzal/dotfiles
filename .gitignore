@@ -5,3 +5,6 @@ git/gitconfig.local.symlink
 **/Brewfile.lock.json
 
 localrc.symlink
+
+# Work-specific config (stays local, not pushed to remote)
+str/
