@@ -21,3 +21,4 @@ quick-terminal-position = top
 # Keybinds
 keybind = super+d=new_split:right
 keybind = global:ctrl+grave_accent=toggle_quick_terminal
+
