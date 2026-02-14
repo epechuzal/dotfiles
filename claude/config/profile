@@ -1,0 +1,68 @@
+#!/bin/bash
+# Claude Code Bash Profile
+# This file is sourced before running bash commands to ensure Claude has access to development tools
+
+# Homebrew (for gh, etc.)
+export PATH="/opt/homebrew/bin:$PATH"
+
+# Node.js via nvm
+# Finds the latest installed node version dynamically — no manual update on upgrade
+if [ -d "$HOME/.nvm/versions/node" ]; then
+  NODE_DIR=$(ls -d "$HOME/.nvm/versions/node"/v* 2>/dev/null | sort -V | tail -1)
+  [ -n "$NODE_DIR" ] && export PATH="$NODE_DIR/bin:$PATH"
+fi
+
+# Environment variables from ~/.localrc
+export GH_TOKEN="$(grep '^export GH_TOKEN=' ~/.localrc 2>/dev/null | cut -d= -f2)"
+export OP_SERVICE_ACCOUNT_TOKEN="$(grep '^export OP_SERVICE_ACCOUNT_TOKEN=' ~/.localrc 2>/dev/null | cut -d= -f2)"
+export NODE_OPTIONS="--no-deprecation"
+
+# =============================================================================
+# Docker Database Access
+# =============================================================================
+# MySQL and Redis are NOT installed locally - they run in Docker containers.
+#
+# TO FIND CONTAINER NAMES:
+#   docker ps --format '{{.Names}}' | grep -i mysql
+#   docker ps --format '{{.Names}}' | grep -i redis
+#
+# CREDENTIALS:
+#   Check .env files in the project root for DB_USER, DB_PASSWORD, DB_NAME, etc.
+#   Example: grep -E '^DB_' .env
+#
+# MYSQL ACCESS:
+#   # Get container name first
+#   MYSQL_CONTAINER=$(docker ps --format '{{.Names}}' | grep -i mysql | head -1)
+#
+#   # Then exec with credentials from .env
+#   docker exec -it $MYSQL_CONTAINER mysql -u <user> -p<password> <database>
+#
+#   # Or for non-interactive queries:
+#   docker exec $MYSQL_CONTAINER mysql -u <user> -p<password> <database> -e "SELECT * FROM ..."
+#
+# REDIS ACCESS:
+#   REDIS_CONTAINER=$(docker ps --format '{{.Names}}' | grep -i redis | head -1)
+#   docker exec -it $REDIS_CONTAINER redis-cli
+# =============================================================================
+
+mysql() {
+  echo "❌ mysql is not installed locally - use docker containers"
+  echo ""
+  echo "Quick reference:"
+  echo "  1. Find container:  docker ps --format '{{.Names}}' | grep -i mysql"
+  echo "  2. Get credentials: grep -E '^DB_' .env"
+  echo "  3. Connect:         docker exec -it <container> mysql -u <user> -p<pw> <db>"
+  echo ""
+  echo "Example:"
+  echo "  docker exec -it scinfax-mysql mysql -u root -p\$DB_PASSWORD scinfax -e 'SHOW TABLES;'"
+  return 1
+}
+
+redis-cli() {
+  echo "❌ redis-cli is not installed locally - use docker containers"
+  echo ""
+  echo "Quick reference:"
+  echo "  1. Find container:  docker ps --format '{{.Names}}' | grep -i redis"
+  echo "  2. Connect:         docker exec -it <container> redis-cli"
+  return 1
+}
