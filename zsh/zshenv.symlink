@@ -1,0 +1,32 @@
+# ~/.zshenv - sourced by ALL zsh invocations (interactive and non-interactive)
+#
+# This is the right place for anything that needs to be available to
+# non-interactive tools like Claude Code, IDEs, and MCP servers — which
+# don't source ~/.zshrc.
+
+# --- Locale ---
+# Ensure UTF-8 everywhere. Without this, non-interactive tools can choke
+# on non-ASCII filenames, git diffs, and command output.
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+
+# --- Homebrew ---
+# Full shellenv sets HOMEBREW_PREFIX, CELLAR, REPOSITORY, MANPATH, INFOPATH,
+# and PATH — not just the bin directory. Many brew-installed tools depend on
+# these variables to locate their resources.
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+# --- User-local binaries ---
+# uv, uvx, pipx, and other user-installed tools land here.
+export PATH="$HOME/.local/bin:$PATH"
+
+# --- Dotfiles bin ---
+# Custom scripts and git subcommands (git-promote, git-wtf, dot, etc.)
+export PATH="$HOME/Workspace/dotfiles/bin:$PATH"
+
+# --- Editor ---
+# Used by git, Claude Code, and anything that needs to open an editor.
+export EDITOR="webstorm"
+export VISUAL="$EDITOR"
