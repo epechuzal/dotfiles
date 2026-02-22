@@ -1,4 +1,5 @@
 tap "homebrew/bundle"
+tap "jhlee0409/tap"
 tap "letsur-dev/claude-peak", "https://github.com/letsur-dev/claude-peak.git"
 # Bourne-Again SHell, a UNIX command interpreter
 brew "bash"
@@ -46,6 +47,8 @@ cask "alt-tab"
 cask "balenaetcher"
 # Terminal-based AI coding assistant
 cask "claude-code"
+# Browse and analyze Claude Code conversation history
+cask "claude-code-history-viewer"
 # Tool to run Windows software
 cask "crossover"
 # Voice and text chat software
