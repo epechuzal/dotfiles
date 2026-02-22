@@ -1,4 +1,5 @@
 tap "homebrew/bundle"
+tap "letsur-dev/claude-peak", "https://github.com/letsur-dev/claude-peak.git"
 # Bourne-Again SHell, a UNIX command interpreter
 brew "bash"
 # GNU File, Shell, and Text utilities
@@ -31,16 +32,18 @@ brew "whisper-cpp"
 brew "witr"
 # Feature-rich command-line audio/video downloader
 brew "yt-dlp"
+# Claude Max subscription usage monitor for macOS menu bar
+brew "letsur-dev/claude-peak/claude-peak"
 # Password manager that keeps all passwords secure behind one password
 cask "1password"
 # Command-line interface for 1Password
 cask "1password-cli"
 # Application launcher and productivity software
 cask "alfred"
+# Enable Windows-like alt-tab
+cask "alt-tab"
 # Tool to flash OS images to SD cards & USB drives
 cask "balenaetcher"
-# Anthropic's official Claude AI desktop app
-cask "claude"
 # Terminal-based AI coding assistant
 cask "claude-code"
 # Tool to run Windows software
@@ -65,8 +68,12 @@ cask "iterm2"
 cask "itermbrowserplugin"
 # JetBrains tools manager
 cask "jetbrains-toolbox"
+# Tool to prevent the system from going into sleep mode
+cask "keepingyouawake"
 # Privacy-first, open-source platform for knowledge sharing and management
 cask "logseq"
+# Knowledge base that works on top of a local folder of plain text Markdown files
+cask "obsidian"
 # WebKit based web browser
 cask "orion"
 # Collaboration platform for API development
