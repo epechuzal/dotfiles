@@ -56,5 +56,22 @@ defaults write com.apple.screencapture location "~/Library/Mobile Documents/com~
 defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 30 '<dict><key>enabled</key><true/><key>value</key><dict><key>parameters</key><array><integer>52</integer><integer>21</integer><integer>1441792</integer></array><key>type</key><string>standard</string></dict></dict>'
 defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 31 '<dict><key>enabled</key><true/><key>value</key><dict><key>parameters</key><array><integer>52</integer><integer>21</integer><integer>1179648</integer></array><key>type</key><string>standard</string></dict></dict>'
 
+# AltTab preferences
+defaults write com.lwouis.alt-tab-macos appearanceStyle -int 2
+defaults write com.lwouis.alt-tab-macos appearanceTheme -int 1
+defaults write com.lwouis.alt-tab-macos holdShortcut -string "⌘"
+defaults write com.lwouis.alt-tab-macos shortcutCount -int 2
+defaults write com.lwouis.alt-tab-macos shortcutStyle -int 1
+defaults write com.lwouis.alt-tab-macos showAppsOrWindows -int 1
+defaults write com.lwouis.alt-tab-macos showTitles -int 2
+defaults write com.lwouis.alt-tab-macos titleTruncation -int 2
+defaults write com.lwouis.alt-tab-macos mouseHoverEnabled -bool true
+defaults write com.lwouis.alt-tab-macos previewFocusedWindow -bool true
+defaults write com.lwouis.alt-tab-macos screensToShow -int 0
+defaults write com.lwouis.alt-tab-macos windowOrder -int 2
+defaults write com.lwouis.alt-tab-macos startAtLogin -bool true
+defaults write com.lwouis.alt-tab-macos menubarIconShown -bool true
+defaults write com.lwouis.alt-tab-macos blacklist '[{"ignore":"0","bundleIdentifier":"com.McAfee.McAfeeSafariHost","hide":"1"},{"ignore":"0","bundleIdentifier":"com.apple.finder","hide":"2"},{"ignore":"2","bundleIdentifier":"com.microsoft.rdc.macos","hide":"0"},{"ignore":"2","bundleIdentifier":"com.teamviewer.TeamViewer","hide":"0"},{"ignore":"2","bundleIdentifier":"org.virtualbox.app.VirtualBoxVM","hide":"0"},{"ignore":"2","bundleIdentifier":"com.parallels.","hide":"0"},{"ignore":"2","bundleIdentifier":"com.citrix.XenAppViewer","hide":"0"},{"ignore":"2","bundleIdentifier":"com.citrix.receiver.icaviewer.mac","hide":"0"},{"ignore":"2","bundleIdentifier":"com.nicesoftware.dcvviewer","hide":"0"},{"ignore":"2","bundleIdentifier":"com.vmware.fusion","hide":"0"},{"ignore":"2","bundleIdentifier":"com.apple.ScreenSharing","hide":"0"},{"ignore":"2","bundleIdentifier":"com.utmapp.UTM","hide":"0"},{"ignore":"0","bundleIdentifier":"com.superduper.superwhisper","hide":"1"},{"ignore":"0","bundleIdentifier":"com.apple.ScreenContinuity","hide":"1"},{"ignore":"0","bundleIdentifier":"com.codeweavers.CrossOver","hide":"1"}]'
+
 # Apply hotkey changes without logout
 /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
