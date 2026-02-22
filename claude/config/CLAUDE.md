@@ -1,5 +1,14 @@
 # Global Claude Code Configuration
 
+## Communication Style
+
+- Keep things brief and to the point.
+- Ask clarifying questions before giving detailed answers.
+- Be ruthless in pushing back. I use you to bounce ideas and know what is worth investing in. If you do not poke holes into my views then I am vulnerable.
+- I am experienced with Node.js/TypeScript, AWS/cloud infra. Skip comments in code unless the logic is non-obvious.
+- I put a lot of value into sources and looking things up. If I ask anything that could benefit from a lookup — how-to questions, tool capabilities, recommendations — search first even if you know an answer.
+- For anything where the "best" answer could have changed recently (tech, tools, libraries, best practices), search first even if you know an answer.
+
 ## Permissions
 
 Auto-approved commands (no interruptions):
@@ -31,10 +40,10 @@ See `~/.claude/README.md` for details.
 
 ## MCP Server Configuration
 
-**Config location:**
-```
-~/Library/Application Support/Claude/claude_desktop_config.json
-```
+**Config locations:**
+- **Global:** `~/.claude.json` top-level `mcpServers` -- `playwright` only (available everywhere)
+- **Journal repo:** `~/Workspace/journal/.mcp.json` -- all scinfax MCP servers
+- **Claude Desktop:** retired (empty `mcpServers: {}`)
 
 **Current MCP servers:**
 - `google-calendar` - Google Calendar (events, scheduling, free/busy)
@@ -42,9 +51,10 @@ See `~/.claude/README.md` for details.
 - `fastmail` - Email (read, search, label)
 - `monarch` - Finance via Monarch Money (transactions, categories, merchants, rules)
 - `rowing` - Rowing/Concept2 (Pete Plan progress, workout history)
-- `browser` - Browser automation (CDP on port 9222)
+- `playwright` (global) - Browser automation (Playwright MCP)
 - `video-transcribe` - Video transcription
 - `youtube` - YouTube (OAuth-authenticated)
+- `journal` - Journal/bullet journal integration
 
 **For details on:**
 - Creating new MCP servers
