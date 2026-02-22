@@ -42,12 +42,12 @@ export DOTFILESDIR=$dotfilesDirectory
 # Set macOS defaults
 $DOTFILESDIR/macos/set-defaults.sh
 
-# Install homebrew
-$DOTFILESDIR/homebrew/install.sh 2>&1
-
-# Upgrade homebrew
+# Update homebrew
 echo "› brew update"
 brew update
+
+# Install homebrew packages
+$DOTFILESDIR/homebrew/install.sh 2>&1
 
 # Install software
 echo "› $DOTFILESDIR/script/install"

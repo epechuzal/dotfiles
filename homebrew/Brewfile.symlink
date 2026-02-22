@@ -65,12 +65,6 @@ cask "ghostty"
 cask "grandperspective"
 # Desktop automation application
 cask "hammerspoon"
-# Terminal emulator as alternative to Apple's Terminal app
-cask "iterm2"
-# Enables an integrated web browser in iTerm2
-cask "itermbrowserplugin"
-# JetBrains tools manager
-cask "jetbrains-toolbox"
 # Tool to prevent the system from going into sleep mode
 cask "keepingyouawake"
 # Privacy-first, open-source platform for knowledge sharing and management

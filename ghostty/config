@@ -1,7 +1,7 @@
 # Ghostty terminal configuration
 # Docs: https://ghostty.org/docs/config
 
-# Font (same as previous iTerm setup)
+# Font
 font-family = MesloLGS Nerd Font Mono
 font-size = 12
 

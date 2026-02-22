@@ -4,5 +4,4 @@ npm
 yarn
 corepack
 @johnlindquist/worktree
-@anthropic-ai/claude-code
 nx
