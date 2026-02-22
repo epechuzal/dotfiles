@@ -44,3 +44,16 @@ defaults write com.apple.Safari IncludeDevelopMenu -bool true
 defaults write com.apple.Safari WebKitDeveloperExtrasEnabledPreferenceKey -bool true
 defaults write com.apple.Safari "com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled" -bool true
 defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
+
+# Save screenshots to iCloud Drive
+mkdir -p ~/Library/Mobile\ Documents/com~apple~CloudDocs/Screenshots
+defaults write com.apple.screencapture location "~/Library/Mobile Documents/com~apple~CloudDocs/Screenshots"
+
+# Swap screenshot shortcuts for selected area:
+# Cmd+Shift+4 → copy to clipboard (default is save to file)
+# Ctrl+Cmd+Shift+4 → save to file (default is copy to clipboard)
+defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 30 '<dict><key>enabled</key><true/><key>value</key><dict><key>parameters</key><array><integer>52</integer><integer>21</integer><integer>1441792</integer></array><key>type</key><string>standard</string></dict></dict>'
+defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 31 '<dict><key>enabled</key><true/><key>value</key><dict><key>parameters</key><array><integer>52</integer><integer>21</integer><integer>1179648</integer></array><key>type</key><string>standard</string></dict></dict>'
+
+# Apply hotkey changes without logout
+/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
