@@ -11,13 +11,12 @@
 
 ## Permissions
 
-Auto-approved commands (no interruptions):
-- **Reading**: cat, ls, echo, head, tail, grep, find, wc, file, stat, awk, sed
-- **Shell utils**: test, pwd, which, whoami, env, printenv, dirname, basename, realpath, readlink
-- **Git read-only**: status, diff, log, show, branch, remote, config --get, rev-parse, ls-files, ls-tree
-- **File reading**: Read tool for any file
-
-Configured in `~/.claude/settings.local.json`
+Broad auto-approve configured in `~/.claude/settings.json` (managed by `dotfiles/claude/settings-base.json`):
+- **File tools**: Read/Glob/Grep anywhere; Write/Edit in `~/Workspace/` and `/tmp/`
+- **Bash**: most read-only and common CLI tools, git, gh, node/npm/yarn/bun, docker, brew, aws, terraform, etc.
+- **Web**: WebSearch, WebFetch
+- **MCP read-only**: Atlassian (Jira/Confluence), Slack, Chrome, Playwright
+- **Ask before**: destructive git ops (force push, reset --hard, clean -f, branch -D)
 
 ## Critical Rules
 
