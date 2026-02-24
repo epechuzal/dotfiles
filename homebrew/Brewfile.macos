@@ -1,0 +1,78 @@
+tap "jhlee0409/tap"
+tap "letsur-dev/claude-peak", "https://github.com/letsur-dev/claude-peak.git"
+# Mac App Store command-line interface
+brew "mas"
+# Why is this running?
+brew "witr"
+# Claude Max subscription usage monitor for macOS menu bar
+brew "letsur-dev/claude-peak/claude-peak"
+# Password manager that keeps all passwords secure behind one password
+cask "1password"
+# Command-line interface for 1Password
+cask "1password-cli"
+# Application launcher and productivity software
+cask "alfred"
+# Enable Windows-like alt-tab
+cask "alt-tab"
+# Tool to flash OS images to SD cards & USB drives
+cask "balenaetcher"
+# Terminal-based AI coding assistant
+cask "claude-code"
+# Browse and analyze Claude Code conversation history
+cask "claude-code-history-viewer"
+# Tool to run Windows software
+cask "crossover"
+# Voice and text chat software
+cask "discord"
+# App to build and share containerised applications and microservices
+cask "docker-desktop"
+# Fork of the DOSBox project
+cask "dosbox-x-app"
+# Web browser
+cask "google-chrome"
+# GPU-accelerated terminal emulator
+cask "ghostty"
+# Graphically shows disk usage within a file system
+cask "grandperspective"
+# Desktop automation application
+cask "hammerspoon"
+# Tool to prevent the system from going into sleep mode
+cask "keepingyouawake"
+# Privacy-first, open-source platform for knowledge sharing and management
+cask "logseq"
+# Knowledge base that works on top of a local folder of plain text Markdown files
+cask "obsidian"
+# WebKit based web browser
+cask "orion"
+# Collaboration platform for API development
+cask "postman"
+# Frontend for emulators, game engines and media players (OpenGL graphics API)
+cask "retroarch"
+# Tool to reverse the direction of scrolling
+cask "scroll-reverser"
+# Store SSH keys in the Secure Enclave
+cask "secretive"
+# Music streaming service
+cask "spotify"
+# Video game digital distribution service
+cask "steam"
+# VPN client for secure internet access and private browsing
+cask "surfshark"
+# Mesh VPN based on WireGuard
+cask "tailscale-app"
+# Native GUI for Homebrew package management
+cask "taphouse"
+# Window manager
+cask "tiles"
+# Virtual machines UI using QEMU
+cask "utm"
+# Open-source code editor
+cask "visual-studio-code"
+# Multimedia player
+cask "vlc"
+# JavaScript IDE
+cask "webstorm"
+# Native desktop client for WhatsApp
+cask "whatsapp"
+# Gecko based web browser
+cask "zen"

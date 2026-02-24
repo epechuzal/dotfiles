@@ -22,4 +22,9 @@ done
 echo "  Installing packages from the global Brewfile."
 brew bundle --global
 
+if [ "$(uname -s)" = "Darwin" ] && [ -f "$DOTFILESDIR/homebrew/Brewfile.macos" ]; then
+  echo "  Installing macOS-only packages."
+  brew bundle --file="$DOTFILESDIR/homebrew/Brewfile.macos"
+fi
+
 exit 0

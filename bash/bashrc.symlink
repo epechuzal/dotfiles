@@ -1,0 +1,8 @@
+# Linuxbrew (for non-login interactive bash)
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
+# Dotfiles bin
+export PATH="$HOME/Workspace/dotfiles/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"

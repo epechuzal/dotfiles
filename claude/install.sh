@@ -34,11 +34,13 @@ link "$TOPIC_DIR/skills/bugfix/SKILL.md" "$CLAUDE_DIR/skills/bugfix/SKILL.md"
 node "$TOPIC_DIR/ensure-settings.js"
 echo "  settings synced"
 
-# Claude Peak – launch on login via LaunchAgent
-PLIST_NAME="com.wecouldbe.claude-peak.plist"
-LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
-mkdir -p "$LAUNCH_AGENTS"
-launchctl bootout "gui/$(id -u)/$PLIST_NAME" 2>/dev/null || true
-link "$TOPIC_DIR/$PLIST_NAME" "$LAUNCH_AGENTS/$PLIST_NAME"
-launchctl bootstrap "gui/$(id -u)" "$LAUNCH_AGENTS/$PLIST_NAME" 2>/dev/null || true
-echo "  Claude Peak will start on login"
+# Claude Peak – launch on login via LaunchAgent (macOS only)
+if [ "$(uname -s)" = "Darwin" ]; then
+  PLIST_NAME="com.wecouldbe.claude-peak.plist"
+  LAUNCH_AGENTS="$HOME/Library/LaunchAgents"
+  mkdir -p "$LAUNCH_AGENTS"
+  launchctl bootout "gui/$(id -u)/$PLIST_NAME" 2>/dev/null || true
+  link "$TOPIC_DIR/$PLIST_NAME" "$LAUNCH_AGENTS/$PLIST_NAME"
+  launchctl bootstrap "gui/$(id -u)" "$LAUNCH_AGENTS/$PLIST_NAME" 2>/dev/null || true
+  echo "  Claude Peak will start on login"
+fi
