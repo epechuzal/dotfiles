@@ -53,7 +53,6 @@ See `~/.claude/README.md` for details.
 - `playwright` (global) - Browser automation (Playwright MCP)
 - `video-transcribe` - Video transcription
 - `youtube` - YouTube (OAuth-authenticated)
-- `journal` - Journal/bullet journal integration
 
 **For details on:**
 - Creating new MCP servers
