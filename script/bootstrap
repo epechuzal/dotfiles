@@ -148,7 +148,7 @@ else
   fail "error installing dependencies"
 fi
 
-# Setup secrets from 1Password
+# Setup secrets from 1Password (optional — skip if deps missing)
 echo ''
 info 'setting up secrets...'
 if [ -f script/secrets ]; then
@@ -156,7 +156,7 @@ if [ -f script/secrets ]; then
   then
     success "secrets configured"
   else
-    fail "error setting up secrets"
+    info "secrets setup skipped (run script/secrets manually when ready)"
   fi
 else
   info 'no script/secrets found, skipping'
