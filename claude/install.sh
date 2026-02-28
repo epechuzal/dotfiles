@@ -34,6 +34,12 @@ link "$TOPIC_DIR/skills/bugfix/SKILL.md" "$CLAUDE_DIR/skills/bugfix/SKILL.md"
 node "$TOPIC_DIR/ensure-settings.js"
 echo "  settings synced"
 
+# Claude Code – install native binary on non-macOS (macOS uses brew cask)
+if [ "$(uname -s)" != "Darwin" ] && ! command -v claude > /dev/null 2>&1; then
+  echo "  Installing Claude Code CLI."
+  curl -fsSL https://claude.ai/install.sh | bash
+fi
+
 # Claude Peak – launch on login via LaunchAgent (macOS only)
 if [ "$(uname -s)" = "Darwin" ]; then
   PLIST_NAME="com.wecouldbe.claude-peak.plist"
