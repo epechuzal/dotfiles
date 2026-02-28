@@ -13,6 +13,7 @@ if [ -d "$HOME/.nvm/versions/node" ]; then
 fi
 
 # Environment variables from ~/.localrc
+# TODO: Replace these grep hacks with `source ~/.localrc` once mac mini has .localrc sourced in its shell profile
 export GH_TOKEN="$(grep '^export GH_TOKEN=' ~/.localrc 2>/dev/null | cut -d= -f2)"
 export OP_SERVICE_ACCOUNT_TOKEN="$(grep '^export OP_SERVICE_ACCOUNT_TOKEN=' ~/.localrc 2>/dev/null | cut -d= -f2)"
 export PAPERLESS_API_TOKEN="$(grep '^export PAPERLESS_API_TOKEN=' ~/.localrc 2>/dev/null | cut -d= -f2)"
