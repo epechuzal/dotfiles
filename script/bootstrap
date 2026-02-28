@@ -137,6 +137,16 @@ install_dotfiles () {
   done
 }
 
+# On Linux, ensure the user has a password set (needed for sudo during installs)
+if [ "$(uname -s)" != "Darwin" ]; then
+  pw_status=$(passwd -S "$(whoami)" 2>/dev/null | awk '{print $2}')
+  if [ "$pw_status" = "L" ] || [ "$pw_status" = "NP" ]; then
+    info "No password set for $(whoami) — sudo will need one."
+    user "Please set a password now:"
+    passwd
+  fi
+fi
+
 setup_gitconfig
 install_dotfiles
 
