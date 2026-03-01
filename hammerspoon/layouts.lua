@@ -2,20 +2,19 @@ local M = {}
 
 M.named = {
   tacitus = {
-    hotkey = { mods = {"cmd", "shift"}, key = "t" },
     slots = {
-      { app = "Obsidian", position = {0, 0, 2/3, 1} },
-      { app = "Ghostty", title = "tacitus", position = {2/3, 0, 1/3, 1} },
+      { app = "Obsidian", position = {0, 0, 0.6, 1} },
+      { app = "Ghostty", title = "tacitus", position = {0.6, 0, 0.4, 1} },
     },
   },
 }
 
 M.templates = {
   {
-    name = "2/3 Left + 1/3 Right",
+    name = "60/40 Left + Right",
     slots = {
-      { label = "Left (2/3)", position = {0, 0, 2/3, 1} },
-      { label = "Right (1/3)", position = {2/3, 0, 1/3, 1} },
+      { label = "Left (60%)", position = {0, 0, 0.6, 1} },
+      { label = "Right (40%)", position = {0.6, 0, 0.4, 1} },
     },
   },
   {
@@ -42,11 +41,11 @@ M.templates = {
     },
   },
   {
-    name = "2/3 Left + 2 Stacked Right",
+    name = "60 Left + 2 Stacked Right",
     slots = {
-      { label = "Left (2/3)", position = {0, 0, 2/3, 1} },
-      { label = "Top Right (1/3)", position = {2/3, 0, 1/3, 1/2} },
-      { label = "Bottom Right (1/3)", position = {2/3, 1/2, 1/3, 1/2} },
+      { label = "Left (60%)", position = {0, 0, 0.6, 1} },
+      { label = "Top Right (40%)", position = {0.6, 0, 0.4, 0.5} },
+      { label = "Bottom Right (40%)", position = {0.6, 0.5, 0.4, 0.5} },
     },
   },
   {
@@ -56,8 +55,6 @@ M.templates = {
     },
   },
 }
-
-M.templateHotkey = { mods = {"cmd", "ctrl"}, key = "space" }
 
 -- Apps shown first in the window chooser (in this order)
 M.preferredApps = { "Zen", "Arc", "Obsidian", "Ghostty" }
