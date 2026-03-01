@@ -59,4 +59,13 @@ M.templates = {
 
 M.templateHotkey = { mods = {"cmd", "ctrl"}, key = "space" }
 
+-- Apps shown first in the window chooser (in this order)
+M.preferredApps = { "Zen", "Arc", "Obsidian", "Ghostty" }
+
+-- Apps never shown in the window chooser
+M.hiddenApps = {
+  "Hammerspoon", "Notification Center", "Contexts",
+  "Surfshark", "Steam Helper",
+}
+
 return M

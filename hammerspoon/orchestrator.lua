@@ -3,6 +3,28 @@ local layouts = require("layouts")
 
 local M = {}
 
+-- Build a set from hiddenApps for fast lookup
+local hiddenSet = {}
+for _, name in ipairs(layouts.hiddenApps or {}) do
+  hiddenSet[name] = true
+end
+
+-- Build priority map from preferredApps (lower = higher priority)
+local priorityMap = {}
+for i, name in ipairs(layouts.preferredApps or {}) do
+  priorityMap[name] = i
+end
+local defaultPriority = #(layouts.preferredApps or {}) + 1
+
+local function sortChoices(choices)
+  table.sort(choices, function(a, b)
+    local pa = priorityMap[a.appName] or defaultPriority
+    local pb = priorityMap[b.appName] or defaultPriority
+    if pa ~= pb then return pa < pb end
+    return a.text < b.text
+  end)
+end
+
 function M.activateNamedLayout(name)
   local layout = layouts.named[name]
   if not layout then
@@ -118,10 +140,13 @@ function M._fillTemplateSlots(template, assigned, slotIndex)
   local choices = {}
   for _, win in ipairs(hs.window.allWindows()) do
     local title = win:title() or ""
-    if title ~= "" and not assignedIds[win:id()] then
+    local app = win:application()
+    local appName = app and app:name() or ""
+    if title ~= "" and not assignedIds[win:id()] and not hiddenSet[appName] then
       table.insert(choices, utils.windowToChoice(win))
     end
   end
+  sortChoices(choices)
 
   local chooser = hs.chooser.new(function(choice)
     if choice then

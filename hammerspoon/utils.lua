@@ -63,10 +63,12 @@ end
 
 function M.windowToChoice(win)
   local app = win:application()
+  local appName = app and app:name() or "Unknown"
   return {
-    text = (app and app:name() or "Unknown") .. " — " .. (win:title() or "untitled"),
+    text = appName .. " — " .. (win:title() or "untitled"),
     subText = "Screen: " .. (win:screen():name() or "unknown"),
     windowId = win:id(),
+    appName = appName,
     image = app and hs.image.imageFromAppBundle(app:bundleID()) or nil,
   }
 end
