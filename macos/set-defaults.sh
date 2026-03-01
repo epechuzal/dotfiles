@@ -56,6 +56,9 @@ defaults write com.apple.screencapture location "~/Library/Mobile Documents/com~
 defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 30 '<dict><key>enabled</key><true/><key>value</key><dict><key>parameters</key><array><integer>52</integer><integer>21</integer><integer>1441792</integer></array><key>type</key><string>standard</string></dict></dict>'
 defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 31 '<dict><key>enabled</key><true/><key>value</key><dict><key>parameters</key><array><integer>52</integer><integer>21</integer><integer>1179648</integer></array><key>type</key><string>standard</string></dict></dict>'
 
+# Disable Ctrl+Cmd+Space emoji/character viewer (used by Hammerspoon modal)
+defaults write com.apple.symbolichotkeys.plist AppleSymbolicHotKeys -dict-add 164 '<dict><key>enabled</key><false/><key>value</key><dict><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>1310720</integer></array><key>type</key><string>standard</string></dict></dict>'
+
 # AltTab preferences
 defaults write com.lwouis.alt-tab-macos appearanceStyle -int 2
 defaults write com.lwouis.alt-tab-macos appearanceTheme -int 1
