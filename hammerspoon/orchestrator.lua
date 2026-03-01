@@ -232,29 +232,35 @@ function M.ideForGhostty()
 
     log("ide:" .. choice.text .. "  dir:" .. dir)
 
-    -- Launch WebStorm at that directory
+    local function arrange(wsWin)
+      utils.positionWindow(wsWin, {0, 0, 0.6, 1})
+      utils.positionWindow(ghosttyWin, {0.6, 0, 0.4, 1})
+      wsWin:focus()
+      ghosttyWin:focus()
+    end
+
+    -- Check if WebStorm already has this project open
+    local existing = utils.findWindows("WebStorm", choice.repo)
+    if #existing > 0 then
+      arrange(existing[1])
+      return
+    end
+
+    -- Not open yet — launch and poll for window
     hs.task.new("/opt/homebrew/bin/webstorm", nil, {dir}):start()
 
-    -- Poll for WebStorm window to appear, then arrange
     local attempts = 0
     hs.timer.doEvery(0.5, function(timer)
       attempts = attempts + 1
       local wsWins = utils.findWindows("WebStorm", choice.repo)
       if #wsWins > 0 then
         timer:stop()
-        utils.positionWindow(wsWins[1], {0, 0, 0.6, 1})
-        utils.positionWindow(ghosttyWin, {0.6, 0, 0.4, 1})
-        wsWins[1]:focus()
-        ghosttyWin:focus()
+        arrange(wsWins[1])
       elseif attempts > 20 then
         timer:stop()
-        -- WebStorm opened but title doesn't match yet, try any WebStorm window
         local allWs = utils.findWindows("WebStorm")
         if #allWs > 0 then
-          utils.positionWindow(allWs[1], {0, 0, 0.6, 1})
-          utils.positionWindow(ghosttyWin, {0.6, 0, 0.4, 1})
-          allWs[1]:focus()
-          ghosttyWin:focus()
+          arrange(allWs[1])
         else
           hs.alert.show("WebStorm didn't open in time")
         end
