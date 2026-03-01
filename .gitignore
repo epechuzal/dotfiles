@@ -9,5 +9,8 @@ localrc.symlink
 # Project-level Claude Code permissions (machine-local)
 .claude/settings.local.json
 
+# Machine-specific Hammerspoon overrides
+hammerspoon/local.lua
+
 # Work-specific config (stays local, not pushed to remote)
 str/

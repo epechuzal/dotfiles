@@ -68,4 +68,20 @@ M.hiddenApps = {
   "Surfshark", "Steam Helper",
 }
 
+-- Machine-specific overrides (not committed)
+-- Create ~/.hammerspoon/local.lua to add/override layouts, preferred/hidden apps
+-- Example:
+--   return function(layouts)
+--     layouts.preferredApps = { "Chrome", "Slack", "Ghostty" }
+--     table.insert(layouts.hiddenApps, "Slack")
+--     layouts.named.work = {
+--       hotkey = { mods = {"cmd", "shift"}, key = "w" },
+--       slots = { ... },
+--     }
+--   end
+local ok, localOverrides = pcall(require, "local")
+if ok and type(localOverrides) == "function" then
+  localOverrides(M)
+end
+
 return M
