@@ -76,6 +76,24 @@ function M.activateNamedLayout(name)
   end
 end
 
+function M.quickSplit()
+  local wins = hs.window.orderedWindows()
+  if #wins < 2 then
+    hs.alert.show("Need at least 2 windows")
+    return
+  end
+
+  local first = wins[1]
+  local second = wins[2]
+  local screen = first:screen()
+
+  utils.positionWindow(first, {0, 0, 0.6, 1}, screen)
+  utils.positionWindow(second, {0.6, 0, 0.4, 1}, screen)
+  first:focus()
+
+  log("quicksplit:" .. (first:application():name() or "?") .. "+" .. (second:application():name() or "?"))
+end
+
 function M._resolveAmbiguous(pendingSlots, index)
   if index > #pendingSlots then return end
 
