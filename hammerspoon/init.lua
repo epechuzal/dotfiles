@@ -38,6 +38,15 @@ function activateTemplate(name)
   hs.alert.show("Unknown template: " .. name)
 end
 
+-- Open IDE alongside a Ghostty CC session
+hs.hotkey.bind({"cmd", "ctrl"}, "i", function()
+  orchestrator.ideForGhostty()
+end)
+
+function openIDE()
+  orchestrator.ideForGhostty()
+end
+
 -- Reload config hotkey
 hs.hotkey.bind({"cmd", "ctrl"}, "r", function()
   hs.reload()

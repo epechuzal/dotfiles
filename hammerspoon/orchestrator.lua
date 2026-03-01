@@ -179,4 +179,92 @@ function M._fillTemplateSlots(template, assigned, slotIndex)
   chooser:show()
 end
 
+-- "Open IDE alongside Ghostty" flow:
+-- Shows all Ghostty windows, user picks one, derives working dir from
+-- title ("repo: branch" → ~/Workspace/repo), launches WebStorm there,
+-- arranges WebStorm 60% left + Ghostty 40% right.
+function M.ideForGhostty()
+  local projectsDir = os.getenv("PROJECTS") or (os.getenv("HOME") .. "/Workspace")
+
+  -- Collect all Ghostty windows across all instances
+  local ghosttyWindows = {}
+  for _, app in ipairs(hs.application.runningApplications()) do
+    if app:name() == "Ghostty" then
+      for _, win in ipairs(app:allWindows()) do
+        local title = win:title() or ""
+        if title ~= "" then
+          table.insert(ghosttyWindows, win)
+        end
+      end
+    end
+  end
+
+  if #ghosttyWindows == 0 then
+    hs.alert.show("No Ghostty windows found")
+    return
+  end
+
+  local choices = {}
+  for _, win in ipairs(ghosttyWindows) do
+    local title = win:title() or ""
+    -- Parse "repo: branch" → repo
+    local repo = title:match("^([^:]+):")
+    table.insert(choices, {
+      text = title,
+      subText = repo and (projectsDir .. "/" .. repo) or "unknown dir",
+      windowId = win:id(),
+      repo = repo,
+      image = hs.image.imageFromAppBundle("com.mitchellh.ghostty"),
+    })
+  end
+
+  local chooser = hs.chooser.new(function(choice)
+    if not choice then return end
+
+    local ghosttyWin = utils.windowById(choice.windowId)
+    if not ghosttyWin then return end
+
+    local dir = choice.repo and (projectsDir .. "/" .. choice.repo) or nil
+    if not dir then
+      hs.alert.show("Couldn't parse working dir from: " .. (choice.text or ""))
+      return
+    end
+
+    log("ide:" .. choice.text .. "  dir:" .. dir)
+
+    -- Launch WebStorm at that directory
+    hs.task.new("/opt/homebrew/bin/webstorm", nil, {dir}):start()
+
+    -- Poll for WebStorm window to appear, then arrange
+    local attempts = 0
+    hs.timer.doEvery(0.5, function(timer)
+      attempts = attempts + 1
+      local wsWins = utils.findWindows("WebStorm", choice.repo)
+      if #wsWins > 0 then
+        timer:stop()
+        utils.positionWindow(wsWins[1], {0, 0, 0.6, 1})
+        utils.positionWindow(ghosttyWin, {0.6, 0, 0.4, 1})
+        wsWins[1]:focus()
+        ghosttyWin:focus()
+      elseif attempts > 20 then
+        timer:stop()
+        -- WebStorm opened but title doesn't match yet, try any WebStorm window
+        local allWs = utils.findWindows("WebStorm")
+        if #allWs > 0 then
+          utils.positionWindow(allWs[1], {0, 0, 0.6, 1})
+          utils.positionWindow(ghosttyWin, {0.6, 0, 0.4, 1})
+          allWs[1]:focus()
+          ghosttyWin:focus()
+        else
+          hs.alert.show("WebStorm didn't open in time")
+        end
+      end
+    end)
+  end)
+
+  chooser:placeholderText("Open IDE for which project?")
+  chooser:choices(choices)
+  chooser:show()
+end
+
 return M
