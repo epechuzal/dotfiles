@@ -3,6 +3,16 @@ local layouts = require("layouts")
 
 local M = {}
 
+local logFile = os.getenv("HOME") .. "/.hammerspoon/usage.log"
+
+local function log(entry)
+  local f = io.open(logFile, "a")
+  if f then
+    f:write(os.date("%Y-%m-%d %H:%M") .. "  " .. entry .. "\n")
+    f:close()
+  end
+end
+
 -- Build a set from hiddenApps for fast lookup
 local hiddenSet = {}
 for _, name in ipairs(layouts.hiddenApps or {}) do
@@ -31,6 +41,8 @@ function M.activateNamedLayout(name)
     hs.alert.show("Unknown layout: " .. name)
     return
   end
+
+  log("named:" .. name)
 
   local pendingSlots = {}
 
@@ -120,13 +132,17 @@ end
 
 function M._fillTemplateSlots(template, assigned, slotIndex)
   if slotIndex > #template.slots then
+    local windowNames = {}
     for _, assignment in ipairs(assigned) do
       utils.positionWindow(assignment.window, assignment.position)
       assignment.window:focus()
+      local app = assignment.window:application()
+      table.insert(windowNames, (app and app:name() or "?") .. ":" .. (assignment.window:title() or "?"))
     end
     if #assigned > 0 then
       assigned[1].window:focus()
     end
+    log("template:" .. template.name .. "  windows:" .. table.concat(windowNames, ", "))
     return
   end
 
