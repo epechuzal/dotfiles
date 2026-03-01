@@ -8,8 +8,8 @@ local banish = require("banish")
 -- Start banish watcher
 banish.start()
 
--- Modal: ctrl+cmd+` activates the mode, then press one key
-local modal = hs.hotkey.modal.new({"cmd", "ctrl"}, "`")
+-- Modal with cheat sheet
+local modal = hs.hotkey.modal.new()
 
 local cheatsheet = nil
 
@@ -34,7 +34,7 @@ function modal:entered()
     { key = "Esc",   desc = "Cancel" },
   }
 
-  local lines = { "⌃⌘`  then:", "" }
+  local lines = { "Hold ⌃⌘  then:", "" }
   for _, e in ipairs(entries) do
     table.insert(lines, string.format("  %-7s %s", e.key, e.desc))
   end
@@ -73,6 +73,60 @@ end)
 modal:bind("", "escape", function()
   modal:exit()
 end)
+
+-- Hold ctrl+cmd for 1s to enter modal, release to dismiss if no action taken
+local holdTimer = nil
+local modalActive = false
+
+local modWatcher = hs.eventtap.new({hs.eventtap.event.types.flagsChanged}, function(event)
+  local flags = event:getFlags()
+  local ctrlCmd = flags.ctrl and flags.cmd and not flags.alt and not flags.shift
+
+  if ctrlCmd and not modalActive then
+    -- Started holding ctrl+cmd, start timer
+    if holdTimer then holdTimer:stop() end
+    holdTimer = hs.timer.doAfter(0.7, function()
+      modalActive = true
+      modal:enter()
+    end)
+  elseif not ctrlCmd then
+    -- Released modifiers
+    if holdTimer then
+      holdTimer:stop()
+      holdTimer = nil
+    end
+    if modalActive then
+      -- Give a brief window to press action key after release
+      hs.timer.doAfter(1.5, function()
+        if modalActive then
+          modalActive = false
+          modal:exit()
+        end
+      end)
+    end
+  end
+
+  return false
+end)
+modWatcher:start()
+
+-- Also support ctrl+cmd+` as direct trigger (no hold delay)
+hs.hotkey.bind({"cmd", "ctrl"}, "`", function()
+  if modalActive then
+    modalActive = false
+    modal:exit()
+  else
+    modalActive = true
+    modal:enter()
+  end
+end)
+
+-- Reset modal state when actions complete
+local origExit = modal.exited
+function modal:exited()
+  modalActive = false
+  origExit(self)
+end
 
 -- Global functions for CLI access (hs -c "...")
 function activateNamedLayout(name)
