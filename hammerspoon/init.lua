@@ -49,30 +49,22 @@ function modal:exited()
   end
 end
 
-modal:bind("", "space", function()
-  modal:exit()
-  orchestrator.showTemplateChooser()
-end)
+-- Bind each action both bare (after release) and with ctrl+cmd held
+local actions = {
+  { mods = "",               key = "space",  fn = function() modal:exit(); orchestrator.showTemplateChooser() end },
+  { mods = {"cmd", "ctrl"},  key = "space",  fn = function() modal:exit(); orchestrator.showTemplateChooser() end },
+  { mods = "",               key = "i",      fn = function() modal:exit(); orchestrator.ideForGhostty() end },
+  { mods = {"cmd", "ctrl"},  key = "i",      fn = function() modal:exit(); orchestrator.ideForGhostty() end },
+  { mods = "",               key = "t",      fn = function() modal:exit(); hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
+  { mods = {"cmd", "ctrl"},  key = "t",      fn = function() modal:exit(); hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
+  { mods = "",               key = "r",      fn = function() modal:exit(); hs.reload() end },
+  { mods = {"cmd", "ctrl"},  key = "r",      fn = function() modal:exit(); hs.reload() end },
+  { mods = "",               key = "escape", fn = function() modal:exit() end },
+}
 
-modal:bind("", "i", function()
-  modal:exit()
-  orchestrator.ideForGhostty()
-end)
-
-modal:bind("", "t", function()
-  modal:exit()
-  hs.alert.show("Layout: tacitus")
-  orchestrator.activateNamedLayout("tacitus")
-end)
-
-modal:bind("", "r", function()
-  modal:exit()
-  hs.reload()
-end)
-
-modal:bind("", "escape", function()
-  modal:exit()
-end)
+for _, a in ipairs(actions) do
+  modal:bind(a.mods, a.key, a.fn)
+end
 
 -- Hold ctrl+cmd for 1s to enter modal, release to dismiss if no action taken
 local holdTimer = nil
@@ -85,7 +77,7 @@ local modWatcher = hs.eventtap.new({hs.eventtap.event.types.flagsChanged}, funct
   if ctrlCmd and not modalActive then
     -- Started holding ctrl+cmd, start timer
     if holdTimer then holdTimer:stop() end
-    holdTimer = hs.timer.doAfter(0.7, function()
+    holdTimer = hs.timer.doAfter(0.4, function()
       modalActive = true
       modal:enter()
     end)
