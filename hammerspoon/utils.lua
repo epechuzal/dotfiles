@@ -43,14 +43,17 @@ end
 function M.findWindows(appName, titlePattern)
   local results = {}
 
-  local app = hs.application.get(appName)
-  if not app then return results end
-
-  for _, win in ipairs(app:allWindows()) do
-    local title = win:title() or ""
-    if title ~= "" then
-      if titlePattern == nil or string.find(title, titlePattern) then
-        table.insert(results, win)
+  -- Scan all running instances of the app (some apps like Ghostty
+  -- run a separate process per window)
+  for _, app in ipairs(hs.application.runningApplications()) do
+    if app:name() == appName then
+      for _, win in ipairs(app:allWindows()) do
+        local title = win:title() or ""
+        if title ~= "" then
+          if titlePattern == nil or string.find(title, titlePattern) then
+            table.insert(results, win)
+          end
+        end
       end
     end
   end
