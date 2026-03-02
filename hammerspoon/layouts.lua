@@ -57,7 +57,7 @@ M.templates = {
 }
 
 -- Apps shown first in the window chooser (in this order)
-M.preferredApps = { "Zen", "Arc", "Obsidian", "Ghostty" }
+M.preferredApps = { "Zen", "Arc", "Obsidian", "Ghostty", "WebStorm" }
 
 -- Apps never shown in the window chooser
 M.hiddenApps = {

@@ -22,10 +22,12 @@ for _, name in ipairs(layouts.hiddenApps or {}) do
   hiddenSet[name] = true
 end
 
--- Build priority map from preferredApps (lower = higher priority)
+-- Build priority map and allow set from preferredApps
+local preferredSet = {}
 local priorityMap = {}
 for i, name in ipairs(layouts.preferredApps or {}) do
   priorityMap[name] = i
+  preferredSet[name] = true
 end
 local defaultPriority = #(layouts.preferredApps or {}) + 1
 
@@ -92,7 +94,7 @@ function M.quickSplit()
     if win:id() ~= first:id() then
       local app = win:application()
       local appName = app and app:name() or ""
-      if not hiddenSet[appName] and (win:title() or "") ~= "" then
+      if preferredSet[appName] and (win:title() or "") ~= "" then
         second = win
         break
       end
