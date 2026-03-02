@@ -40,6 +40,64 @@ if [ "$(uname -s)" != "Darwin" ] && ! command -v claude > /dev/null 2>&1; then
   curl -fsSL https://claude.ai/install.sh | bash
 fi
 
+# LSP language servers — used by Claude Code plugins
+if ! command -v typescript-language-server &>/dev/null; then
+  npm install -g typescript typescript-language-server
+  echo "  installed typescript-language-server"
+else
+  echo "  typescript-language-server already installed"
+fi
+
+if ! command -v pyright &>/dev/null; then
+  pip install pyright
+  echo "  installed pyright"
+else
+  echo "  pyright already installed"
+fi
+
+# Claude Code LSP plugins
+if command -v claude &>/dev/null; then
+  PLUGINS_FILE="$CLAUDE_DIR/plugins/installed_plugins.json"
+
+  if ! grep -q "typescript-lsp" "$PLUGINS_FILE" 2>/dev/null; then
+    claude plugin install typescript-lsp@claude-plugins-official
+    echo "  installed typescript-lsp plugin"
+  else
+    echo "  typescript-lsp plugin already installed"
+  fi
+
+  if ! grep -q "pyright-lsp" "$PLUGINS_FILE" 2>/dev/null; then
+    claude plugin install pyright-lsp@claude-plugins-official
+    echo "  installed pyright-lsp plugin"
+  else
+    echo "  pyright-lsp plugin already installed"
+  fi
+
+  if ! grep -q "code-simplifier" "$PLUGINS_FILE" 2>/dev/null; then
+    claude plugin install code-simplifier@claude-plugins-official
+    echo "  installed code-simplifier plugin"
+  else
+    echo "  code-simplifier plugin already installed"
+  fi
+
+  if ! grep -q "superpowers" "$PLUGINS_FILE" 2>/dev/null; then
+    claude plugin install superpowers@claude-plugins-official
+    echo "  installed superpowers plugin"
+  else
+    echo "  superpowers plugin already installed"
+  fi
+
+  # GSD (Get Shit Done) — spec-driven development framework
+  if [ ! -f "$CLAUDE_DIR/gsd-file-manifest.json" ]; then
+    npx get-shit-done-cc --claude --global
+    echo "  installed GSD"
+  else
+    echo "  GSD already installed"
+  fi
+else
+  echo "  ⚠ claude CLI not found — skipping plugin and GSD install"
+fi
+
 # Claude Peak – launch on login via LaunchAgent (macOS only)
 if [ "$(uname -s)" = "Darwin" ]; then
   PLIST_NAME="com.wecouldbe.claude-peak.plist"
