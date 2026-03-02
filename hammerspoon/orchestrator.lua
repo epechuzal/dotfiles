@@ -80,15 +80,29 @@ function M.activateNamedLayout(name)
 end
 
 function M.quickSplit()
-  local wins = hs.window.orderedWindows()
-  if #wins < 2 then
-    hs.alert.show("Need at least 2 windows")
+  local first = hs.window.frontmostWindow()
+  if not first then
+    hs.alert.show("No frontmost window")
     return
   end
 
-  local first = wins[1]
-  local second = wins[2]
   local screen = first:screen()
+  local second = nil
+  for _, win in ipairs(hs.window.orderedWindows()) do
+    if win:id() ~= first:id() then
+      local app = win:application()
+      local appName = app and app:name() or ""
+      if not hiddenSet[appName] and (win:title() or "") ~= "" then
+        second = win
+        break
+      end
+    end
+  end
+
+  if not second then
+    hs.alert.show("No second window found")
+    return
+  end
 
   utils.positionWindow(first, {0, 0, 0.6, 1}, screen)
   utils.positionWindow(second, {0.6, 0, 0.4, 1}, screen)

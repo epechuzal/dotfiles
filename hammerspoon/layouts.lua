@@ -62,7 +62,7 @@ M.preferredApps = { "Zen", "Arc", "Obsidian", "Ghostty" }
 -- Apps never shown in the window chooser
 M.hiddenApps = {
   "Hammerspoon", "Notification Center", "Contexts",
-  "Surfshark", "Steam Helper",
+  "Surfshark", "Steam", "Steam Helper",
 }
 
 -- Machine-specific overrides (not committed)
