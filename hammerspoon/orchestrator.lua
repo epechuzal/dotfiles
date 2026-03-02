@@ -5,6 +5,9 @@ local M = {}
 
 local logFile = os.getenv("HOME") .. "/.hammerspoon/usage.log"
 
+-- Tile toggle snapshot: keyed by "appName:screenId"
+local tileSnapshots = {}
+
 local function log(entry)
   local f = io.open(logFile, "a")
   if f then
@@ -289,6 +292,124 @@ function M.ideForGhostty()
   chooser:placeholderText("Open IDE for which project?")
   chooser:choices(choices)
   chooser:show()
+end
+
+local function appWindowsOnScreen(appName, screen)
+  local wins = {}
+  for _, app in ipairs(hs.application.runningApplications()) do
+    if app:name() == appName then
+      for _, win in ipairs(app:allWindows()) do
+        local title = win:title() or ""
+        if title ~= "" and win:screen():id() == screen:id() then
+          table.insert(wins, win)
+        end
+      end
+    end
+  end
+  return wins
+end
+
+function M.tileFrontmostApp()
+  local frontWin = hs.window.frontmostWindow()
+  if not frontWin then
+    hs.alert.show("No frontmost window")
+    return
+  end
+
+  local app = frontWin:application()
+  local appName = app and app:name() or ""
+  local screen = frontWin:screen()
+  local snapshotKey = appName .. ":" .. tostring(screen:id())
+
+  -- Collect windows of this app on this screen
+  local wins = appWindowsOnScreen(appName, screen)
+  if #wins == 0 then return end
+
+  -- Check for toggle: restore if snapshot exists and windows match
+  local snap = tileSnapshots[snapshotKey]
+  if snap then
+    local snapIds = {}
+    for _, s in ipairs(snap) do snapIds[s.id] = true end
+    local currentIds = {}
+    for _, w in ipairs(wins) do currentIds[w:id()] = true end
+
+    -- Check windows haven't changed
+    local match = true
+    for id in pairs(snapIds) do
+      if not currentIds[id] then match = false; break end
+    end
+    for id in pairs(currentIds) do
+      if not snapIds[id] then match = false; break end
+    end
+
+    if match then
+      -- Restore
+      for _, s in ipairs(snap) do
+        local win = hs.window.get(s.id)
+        if win then
+          win:setFrame(s.frame)
+          if s.minimized then win:minimize() end
+        end
+      end
+      tileSnapshots[snapshotKey] = nil
+      log("tile-restore:" .. appName .. " (" .. #snap .. " windows)")
+      return
+    else
+      -- Windows changed, discard snapshot
+      tileSnapshots[snapshotKey] = nil
+    end
+  end
+
+  -- Save snapshot
+  local snapshot = {}
+  for _, win in ipairs(wins) do
+    table.insert(snapshot, {
+      id = win:id(),
+      frame = win:frame(),
+      minimized = win:isMinimized(),
+    })
+  end
+  tileSnapshots[snapshotKey] = snapshot
+
+  -- Unminimize all
+  for _, win in ipairs(wins) do
+    if win:isMinimized() then win:unminimize() end
+  end
+
+  local f = screen:frame()
+  local count = #wins
+
+  if count == 1 then
+    utils.positionWindow(wins[1], {0, 0, 1, 1}, screen)
+  elseif count == 2 then
+    utils.positionWindow(wins[1], {0, 0, 0.5, 1}, screen)
+    utils.positionWindow(wins[2], {0.5, 0, 0.5, 1}, screen)
+  elseif count == 3 then
+    for i, win in ipairs(wins) do
+      utils.positionWindow(win, {(i-1)/3, 0, 1/3, 1}, screen)
+    end
+  elseif count == 4 then
+    utils.positionWindow(wins[1], {0, 0, 0.5, 0.5}, screen)
+    utils.positionWindow(wins[2], {0.5, 0, 0.5, 0.5}, screen)
+    utils.positionWindow(wins[3], {0, 0.5, 0.5, 0.5}, screen)
+    utils.positionWindow(wins[4], {0.5, 0.5, 0.5, 0.5}, screen)
+  else
+    -- 5+: fanned cascade
+    local minW = f.w * 0.5
+    local offsetX = (f.w - minW) / (count - 1)
+    for i, win in ipairs(wins) do
+      win:setFrame({
+        x = f.x + (i - 1) * offsetX,
+        y = f.y,
+        w = minW,
+        h = f.h,
+      })
+    end
+  end
+
+  -- Focus the first window last so it's on top
+  wins[1]:focus()
+  log("tile:" .. appName .. " (" .. count .. " windows)")
 end
 
 return M
