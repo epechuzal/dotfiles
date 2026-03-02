@@ -94,7 +94,9 @@ function M.quickSplit()
   utils.positionWindow(second, {0.6, 0, 0.4, 1}, screen)
   first:focus()
 
-  log("quicksplit:" .. (first:application():name() or "?") .. "+" .. (second:application():name() or "?"))
+  local firstName = first:application() and first:application():name() or "?"
+  local secondName = second:application() and second:application():name() or "?"
+  log("quicksplit:" .. firstName .. "+" .. secondName)
 end
 
 function M._resolveAmbiguous(pendingSlots, index)
@@ -300,7 +302,8 @@ local function appWindowsOnScreen(appName, screen)
     if app:name() == appName then
       for _, win in ipairs(app:allWindows()) do
         local title = win:title() or ""
-        if title ~= "" and win:screen():id() == screen:id() then
+        local winScreen = win:screen()
+        if title ~= "" and winScreen and winScreen:id() == screen:id() then
           table.insert(wins, win)
         end
       end
