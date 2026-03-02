@@ -81,6 +81,39 @@ function M.activateNamedLayout(name)
   end
 end
 
+local function arrangeQuickSplit(main, terminal)
+  local screen = main:screen()
+  utils.positionWindow(main, {0, 0, 0.6, 1}, screen)
+  utils.positionWindow(terminal, {0.6, 0, 0.4, 1}, screen)
+  main:focus()
+  local mainName = main:application() and main:application():name() or "?"
+  log("quicksplit:" .. mainName .. "+Ghostty")
+end
+
+local function pickGhosttyAndArrange(main, ghosttyWins)
+  if #ghosttyWins == 0 then
+    hs.alert.show("No Ghostty window found")
+    return
+  end
+  if #ghosttyWins == 1 then
+    arrangeQuickSplit(main, ghosttyWins[1])
+    return
+  end
+  local choices = {}
+  for _, win in ipairs(ghosttyWins) do
+    table.insert(choices, utils.windowToChoice(win))
+  end
+  local chooser = hs.chooser.new(function(choice)
+    if choice then
+      local win = utils.windowById(choice.windowId)
+      if win then arrangeQuickSplit(main, win) end
+    end
+  end)
+  chooser:placeholderText("Pick Ghostty window for right side...")
+  chooser:choices(choices)
+  chooser:show()
+end
+
 function M.quickSplit()
   local front = hs.window.frontmostWindow()
   if not front then
@@ -90,12 +123,10 @@ function M.quickSplit()
 
   local frontApp = front:application()
   local frontAppName = frontApp and frontApp:name() or ""
-  local screen = front:screen()
 
-  local main, terminal
   if frontAppName == "Ghostty" then
-    -- Frontmost is Ghostty — find most recent non-Ghostty preferred app for 60%
-    terminal = front
+    -- Frontmost is Ghostty — find most recent preferred app for 60%
+    local main = nil
     for _, win in ipairs(hs.window.orderedWindows()) do
       local app = win:application()
       local appName = app and app:name() or ""
@@ -104,37 +135,41 @@ function M.quickSplit()
         break
       end
     end
-  else
-    -- Frontmost is the main app — find most recent Ghostty for 40%
-    main = front
-    local ghosttyWins = utils.findWindows("Ghostty")
-    for _, win in ipairs(hs.window.orderedWindows()) do
-      if win:id() ~= front:id() then
-        local app = win:application()
-        local appName = app and app:name() or ""
-        if appName == "Ghostty" and (win:title() or "") ~= "" then
-          terminal = win
-          break
-        end
+    if not main then
+      hs.alert.show("No main app window found")
+      return
+    end
+    arrangeQuickSplit(main, front)
+
+  elseif frontAppName == "Obsidian" then
+    -- Obsidian → tacitus (Obsidian + Ghostty matching "tacitus")
+    M.activateNamedLayout("tacitus")
+
+  elseif frontAppName == "WebStorm" then
+    -- WebStorm → match Ghostty by project name (title = "repo: branch")
+    local project = front:title() or ""
+    local matched = nil
+    local allGhostty = utils.findWindows("Ghostty")
+    for _, win in ipairs(allGhostty) do
+      local title = win:title() or ""
+      if title:match("^" .. project .. ":") then
+        matched = win
+        break
       end
     end
-  end
+    if matched then
+      arrangeQuickSplit(front, matched)
+    elseif #allGhostty > 0 then
+      pickGhosttyAndArrange(front, allGhostty)
+    else
+      hs.alert.show("No Ghostty window found")
+    end
 
-  if not main then
-    hs.alert.show("No main app window found")
-    return
+  else
+    -- Browser or other preferred app → chooser if multiple Ghosttys
+    local allGhostty = utils.findWindows("Ghostty")
+    pickGhosttyAndArrange(front, allGhostty)
   end
-  if not terminal then
-    hs.alert.show("No Ghostty window found")
-    return
-  end
-
-  utils.positionWindow(main, {0, 0, 0.6, 1}, screen)
-  utils.positionWindow(terminal, {0.6, 0, 0.4, 1}, screen)
-  main:focus()
-
-  local mainName = main:application() and main:application():name() or "?"
-  log("quicksplit:" .. mainName .. "+Ghostty")
 end
 
 function M._resolveAmbiguous(pendingSlots, index)
