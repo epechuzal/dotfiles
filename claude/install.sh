@@ -49,7 +49,7 @@ else
 fi
 
 if ! command -v pyright &>/dev/null; then
-  pip install pyright
+  uv tool install pyright
   echo "  installed pyright"
 else
   echo "  pyright already installed"
