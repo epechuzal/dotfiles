@@ -82,37 +82,59 @@ function M.activateNamedLayout(name)
 end
 
 function M.quickSplit()
-  local first = hs.window.frontmostWindow()
-  if not first then
+  local front = hs.window.frontmostWindow()
+  if not front then
     hs.alert.show("No frontmost window")
     return
   end
 
-  local screen = first:screen()
-  local second = nil
-  for _, win in ipairs(hs.window.orderedWindows()) do
-    if win:id() ~= first:id() then
+  local frontApp = front:application()
+  local frontAppName = frontApp and frontApp:name() or ""
+  local screen = front:screen()
+
+  local main, terminal
+  if frontAppName == "Ghostty" then
+    -- Frontmost is Ghostty — find most recent non-Ghostty preferred app for 60%
+    terminal = front
+    for _, win in ipairs(hs.window.orderedWindows()) do
       local app = win:application()
       local appName = app and app:name() or ""
-      if preferredSet[appName] and (win:title() or "") ~= "" then
-        second = win
+      if appName ~= "Ghostty" and preferredSet[appName] and (win:title() or "") ~= "" then
+        main = win
         break
+      end
+    end
+  else
+    -- Frontmost is the main app — find most recent Ghostty for 40%
+    main = front
+    local ghosttyWins = utils.findWindows("Ghostty")
+    for _, win in ipairs(hs.window.orderedWindows()) do
+      if win:id() ~= front:id() then
+        local app = win:application()
+        local appName = app and app:name() or ""
+        if appName == "Ghostty" and (win:title() or "") ~= "" then
+          terminal = win
+          break
+        end
       end
     end
   end
 
-  if not second then
-    hs.alert.show("No second window found")
+  if not main then
+    hs.alert.show("No main app window found")
+    return
+  end
+  if not terminal then
+    hs.alert.show("No Ghostty window found")
     return
   end
 
-  utils.positionWindow(first, {0, 0, 0.6, 1}, screen)
-  utils.positionWindow(second, {0.6, 0, 0.4, 1}, screen)
-  first:focus()
+  utils.positionWindow(main, {0, 0, 0.6, 1}, screen)
+  utils.positionWindow(terminal, {0.6, 0, 0.4, 1}, screen)
+  main:focus()
 
-  local firstName = first:application() and first:application():name() or "?"
-  local secondName = second:application() and second:application():name() or "?"
-  log("quicksplit:" .. firstName .. "+" .. secondName)
+  local mainName = main:application() and main:application():name() or "?"
+  log("quicksplit:" .. mainName .. "+Ghostty")
 end
 
 function M._resolveAmbiguous(pendingSlots, index)
