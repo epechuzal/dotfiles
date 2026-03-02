@@ -85,6 +85,7 @@ local function arrangeQuickSplit(main, terminal)
   local screen = main:screen()
   utils.positionWindow(main, {0, 0, 0.6, 1}, screen)
   utils.positionWindow(terminal, {0.6, 0, 0.4, 1}, screen)
+  terminal:focus()
   main:focus()
   local mainName = main:application() and main:application():name() or "?"
   log("quicksplit:" .. mainName .. "+Ghostty")
