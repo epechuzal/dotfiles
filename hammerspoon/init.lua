@@ -25,19 +25,43 @@ local cheatsheetStyle = {
   padding = 24,
 }
 
-function modal:entered()
-  local entries = {
-    { key = "Space", desc = "Template chooser" },
-    { key = "I",     desc = "IDE for Ghostty" },
-    { key = "T",     desc = "Tacitus layout" },
-    { key = "R",     desc = "Reload config" },
-    { key = "Esc",   desc = "Cancel" },
-  }
+-- Speed dial grid: rows map to keyboard layout
+-- Top:    Q W E  (quirky/app-specific)
+-- Middle: A S D  (named layouts)
+-- Bottom: Z X C  (generic utilities)
+local speedDial = {
+  { -- Row 1: Q W E
+    { key = "q", label = "IDE+Ghostty", fn = function() orchestrator.ideForGhostty() end },
+    { key = "w", label = nil },
+    { key = "e", label = nil },
+  },
+  { -- Row 2: A S D
+    { key = "a", label = "Tacitus", fn = function() hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
+    { key = "s", label = nil },
+    { key = "d", label = nil },
+  },
+  { -- Row 3: Z X C
+    { key = "z", label = "Templates", fn = function() orchestrator.showTemplateChooser() end },
+    { key = "x", label = "60/40", fn = function() orchestrator.quickSplit() end },
+    { key = "c", label = "Tile App", fn = function() orchestrator.tileFrontmostApp() end },
+  },
+}
 
-  local lines = { "Hold ⌃⌘  then:", "" }
-  for _, e in ipairs(entries) do
-    table.insert(lines, string.format("  %-7s %s", e.key, e.desc))
+function modal:entered()
+  local lines = { "⌃⌘ Speed Dial", "" }
+  for _, row in ipairs(speedDial) do
+    local cols = {}
+    for _, slot in ipairs(row) do
+      if slot.label then
+        table.insert(cols, string.format("%-2s %-12s", string.upper(slot.key), slot.label))
+      else
+        table.insert(cols, string.format("%-2s %-12s", string.upper(slot.key), "· · ·"))
+      end
+    end
+    table.insert(lines, table.concat(cols, "  "))
   end
+  table.insert(lines, "")
+  table.insert(lines, string.format("%-2s %-12s", "R", "Reload"))
 
   cheatsheet = hs.alert.show(table.concat(lines, "\n"), cheatsheetStyle, hs.screen.mainScreen(), "indefinite")
 end
@@ -49,22 +73,20 @@ function modal:exited()
   end
 end
 
--- Bind each action both bare (after release) and with ctrl+cmd held
-local actions = {
-  { mods = "",               key = "space",  fn = function() modal:exit(); orchestrator.showTemplateChooser() end },
-  { mods = {"cmd", "ctrl"},  key = "space",  fn = function() modal:exit(); orchestrator.showTemplateChooser() end },
-  { mods = "",               key = "i",      fn = function() modal:exit(); orchestrator.ideForGhostty() end },
-  { mods = {"cmd", "ctrl"},  key = "i",      fn = function() modal:exit(); orchestrator.ideForGhostty() end },
-  { mods = "",               key = "t",      fn = function() modal:exit(); hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
-  { mods = {"cmd", "ctrl"},  key = "t",      fn = function() modal:exit(); hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
-  { mods = "",               key = "r",      fn = function() modal:exit(); hs.reload() end },
-  { mods = {"cmd", "ctrl"},  key = "r",      fn = function() modal:exit(); hs.reload() end },
-  { mods = "",               key = "escape", fn = function() modal:exit() end },
-}
-
-for _, a in ipairs(actions) do
-  modal:bind(a.mods, a.key, a.fn)
+for _, row in ipairs(speedDial) do
+  for _, slot in ipairs(row) do
+    if slot.fn then
+      local wrapped = function() modal:exit(); slot.fn() end
+      modal:bind("", slot.key, wrapped)
+      modal:bind({"cmd", "ctrl"}, slot.key, wrapped)
+    end
+  end
 end
+
+-- Keep reload outside the grid
+modal:bind("", "r", function() modal:exit(); hs.reload() end)
+modal:bind({"cmd", "ctrl"}, "r", function() modal:exit(); hs.reload() end)
+modal:bind("", "escape", function() modal:exit() end)
 
 -- Hold ctrl+cmd for 1s to enter modal, release to dismiss if no action taken
 local holdTimer = nil
