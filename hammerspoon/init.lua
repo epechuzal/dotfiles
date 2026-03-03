@@ -37,7 +37,7 @@ local speedDial = {
   },
   { -- Row 2: A S D
     { key = "a", label = "Tacitus", fn = function() hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
-    { key = "s", label = nil },
+    { key = "s", label = "Zen", fn = function() hs.application.launchOrFocus("Zen") end },
     { key = "d", label = nil },
   },
   { -- Row 3: Z X C
@@ -99,7 +99,7 @@ local modWatcher = hs.eventtap.new({hs.eventtap.event.types.flagsChanged}, funct
   if ctrlCmd and not modalActive then
     -- Started holding ctrl+cmd, start timer
     if holdTimer then holdTimer:stop() end
-    holdTimer = hs.timer.doAfter(0.4, function()
+    holdTimer = hs.timer.doAfter(0.15, function()
       modalActive = true
       modal:enter()
     end)
