@@ -6,8 +6,8 @@ git/gitconfig.local.symlink
 
 localrc.symlink
 
-# Project-level Claude Code permissions (machine-local)
-.claude/settings.local.json
+# Claude Code project config
+.claude/
 
 # Machine-specific Hammerspoon overrides
 hammerspoon/local.lua
