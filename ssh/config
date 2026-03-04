@@ -6,7 +6,6 @@ Match exec "uname | grep -q Darwin"
 
 Host *
     AddKeysToAgent yes
-    IdentitiesOnly yes
     HashKnownHosts no
     ServerAliveInterval 60
     ServerAliveCountMax 3
