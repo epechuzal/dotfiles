@@ -1,0 +1,12 @@
+# Machine-specific hosts (tailnet, work, etc.)
+Include config.local
+
+Match exec "uname | grep -q Darwin"
+    IdentityAgent /Users/eddypechuzal/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh
+
+Host *
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+    HashKnownHosts no
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
