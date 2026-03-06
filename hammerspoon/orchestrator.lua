@@ -552,17 +552,8 @@ local function ghosttyChoiceImage(title)
 end
 
 function M.ghosttyWindowSwitcher()
-  local ghosttyWindows = {}
-  for _, app in ipairs(hs.application.runningApplications()) do
-    if app:name() == "Ghostty" then
-      for _, win in ipairs(app:allWindows()) do
-        local title = win:title() or ""
-        if title ~= "" then
-          table.insert(ghosttyWindows, win)
-        end
-      end
-    end
-  end
+  local projectsDir = os.getenv("PROJECTS") or (os.getenv("HOME") .. "/Workspace")
+  local ghosttyWindows = utils.findWindows("Ghostty")
 
   if #ghosttyWindows == 0 then
     hs.alert.show("No Ghostty windows found")
@@ -577,7 +568,7 @@ function M.ghosttyWindowSwitcher()
 
     table.insert(choices, {
       text = title,
-      subText = repo and ("~/Workspace/" .. repo) or "scratch / other",
+      subText = repo and (projectsDir .. "/" .. repo) or "scratch / other",
       windowId = win:id(),
       _repo = repo,
       image = ghosttyChoiceImage(title),
@@ -594,7 +585,10 @@ function M.ghosttyWindowSwitcher()
   local chooser = hs.chooser.new(function(choice)
     if not choice then return end
     local win = utils.windowById(choice.windowId)
-    if win then win:focus() end
+    if win then
+      log("ghostty-switch:" .. (choice.text or "?"))
+      win:focus()
+    end
   end)
 
   chooser:placeholderText("Switch to Ghostty window...")
