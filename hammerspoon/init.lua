@@ -32,8 +32,8 @@ local cheatsheetStyle = {
 local speedDial = {
   { -- Row 1: Q W E
     { key = "q", label = "IDE+Ghostty", fn = function() orchestrator.ideForGhostty() end },
-    { key = "w", label = nil },
-    { key = "e", label = nil },
+    { key = "w", label = "Ghostty", fn = function() orchestrator.ghosttyWindowSwitcher() end },
+    { key = "e", label = "Scratch", fn = function() orchestrator.scratchTerminal() end },
   },
   { -- Row 2: A S D
     { key = "a", label = "Tacitus", fn = function() hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
