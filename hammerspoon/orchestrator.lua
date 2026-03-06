@@ -598,6 +598,8 @@ function M.ghosttyWindowSwitcher()
   chooser:show()
 end
 
+local scratchLaunching = false
+
 function M.scratchTerminal()
   -- Find existing scratch Ghostty by grepping process args for scratch.conf
   local output, status = hs.execute("ps -eo pid,args | grep '[G]hostty.app/Contents/MacOS/ghostty' | grep '" .. SCRATCH_CONF .. "' | awk '{print $1}' | head -1")
@@ -616,6 +618,9 @@ function M.scratchTerminal()
       end
     end
   end
+
+  if scratchLaunching then return end
+  scratchLaunching = true
 
   -- Launch new scratch terminal
   hs.task.new("/usr/bin/open", nil, {
@@ -637,6 +642,7 @@ function M.scratchTerminal()
           local wins = app:allWindows()
           if #wins > 0 then
             timer:stop()
+            scratchLaunching = false
             local screen = hs.screen.mainScreen():frame()
             local w, h = 1400, 900
             wins[1]:setFrame({
@@ -654,6 +660,7 @@ function M.scratchTerminal()
     end
     if attempts > 25 then
       timer:stop()
+      scratchLaunching = false
       hs.alert.show("Scratch terminal didn't open in time")
     end
   end)
