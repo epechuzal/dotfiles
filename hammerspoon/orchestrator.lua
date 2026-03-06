@@ -40,6 +40,8 @@ for i, entry in ipairs(layouts.repoColors or {}) do
 end
 local defaultRepoPriority = #(layouts.repoColors or {}) + 1
 
+local SCRATCH_CONF = os.getenv("HOME") .. "/Workspace/dotfiles/ghostty/scratch.conf"
+
 local function sortChoices(choices)
   table.sort(choices, function(a, b)
     local pa = priorityMap[a.appName] or defaultPriority
@@ -594,6 +596,67 @@ function M.ghosttyWindowSwitcher()
   chooser:placeholderText("Switch to Ghostty window...")
   chooser:choices(choices)
   chooser:show()
+end
+
+function M.scratchTerminal()
+  -- Find existing scratch Ghostty by grepping process args for scratch.conf
+  local output, status = hs.execute("ps -eo pid,args | grep '[G]hostty.app/Contents/MacOS/ghostty' | grep '" .. SCRATCH_CONF .. "' | awk '{print $1}' | head -1")
+  local pid = output and tonumber(output:match("%d+"))
+
+  if pid then
+    -- Find the window for this PID and focus it
+    for _, app in ipairs(hs.application.runningApplications()) do
+      if app:name() == "Ghostty" and app:pid() == pid then
+        local wins = app:allWindows()
+        if #wins > 0 then
+          wins[1]:focus()
+          log("scratch:focus")
+          return
+        end
+      end
+    end
+  end
+
+  -- Launch new scratch terminal
+  hs.task.new("/usr/bin/open", nil, {
+    "-na", "Ghostty.app", "--args",
+    "--config-file=" .. SCRATCH_CONF,
+    "--working-directory=" .. os.getenv("HOME"),
+    "-e", "zsh", "-l",
+  }):start()
+
+  -- Poll for window, then position 1400x900 centered
+  local attempts = 0
+  hs.timer.doEvery(0.2, function(timer)
+    attempts = attempts + 1
+    for _, app in ipairs(hs.application.runningApplications()) do
+      if app:name() == "Ghostty" then
+        -- Check if this is the scratch process by inspecting its args
+        local check, _ = hs.execute("ps -o args= -p " .. tostring(app:pid()))
+        if check and check:find(SCRATCH_CONF, 1, true) then
+          local wins = app:allWindows()
+          if #wins > 0 then
+            timer:stop()
+            local screen = hs.screen.mainScreen():frame()
+            local w, h = 1400, 900
+            wins[1]:setFrame({
+              x = screen.x + (screen.w - w) / 2,
+              y = screen.y + (screen.h - h) / 2,
+              w = w,
+              h = h,
+            })
+            wins[1]:focus()
+            log("scratch:create")
+            return
+          end
+        end
+      end
+    end
+    if attempts > 25 then
+      timer:stop()
+      hs.alert.show("Scratch terminal didn't open in time")
+    end
+  end)
 end
 
 return M
