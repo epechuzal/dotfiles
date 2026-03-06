@@ -31,6 +31,15 @@ for i, name in ipairs(layouts.preferredApps or {}) do
 end
 local defaultPriority = #(layouts.preferredApps or {}) + 1
 
+-- Build repo color lookup from layouts config
+local repoPriority = {}
+local repoColorName = {}
+for i, entry in ipairs(layouts.repoColors or {}) do
+  repoPriority[entry.repo] = i
+  repoColorName[entry.repo] = entry.color
+end
+local defaultRepoPriority = #(layouts.repoColors or {}) + 1
+
 local function sortChoices(choices)
   table.sort(choices, function(a, b)
     local pa = priorityMap[a.appName] or defaultPriority
@@ -487,6 +496,110 @@ function M.tileFrontmostApp()
   -- Focus the first window last so it's on top
   wins[1]:focus()
   log("tile:" .. appName .. " (" .. count .. " windows)")
+end
+
+-- Colored circle image for Ghostty window switcher
+local colorImageCache = {}
+
+local function colorCircleImage(rgb, alpha)
+  alpha = alpha or 1.0
+  local key = string.format("%.2f,%.2f,%.2f,%.2f", rgb[1], rgb[2], rgb[3], alpha)
+  if colorImageCache[key] then return colorImageCache[key] end
+
+  local size = 24
+  local canvas = hs.canvas.new({x = 0, y = 0, w = size, h = size})
+  canvas:appendElements({
+    type = "circle",
+    center = {x = size/2, y = size/2},
+    radius = size/2 - 1,
+    fillColor = {red = rgb[1], green = rgb[2], blue = rgb[3], alpha = alpha},
+    strokeWidth = 0,
+  })
+  local img = canvas:imageFromCanvas()
+  canvas:delete()
+  colorImageCache[key] = img
+  return img
+end
+
+local function ghosttyChoiceImage(title)
+  local repo = title:match("^([^:]+):")
+  if not repo then
+    local rgb = (layouts.colorPalette or {}).gray or {0.38, 0.49, 0.55}
+    return colorCircleImage(rgb, 0.5)
+  end
+  repo = repo:match("^%s*(.-)%s*$")  -- trim
+
+  local colorName = repoColorName[repo] or "gray"
+  local rgb = (layouts.colorPalette or {})[colorName] or {0.38, 0.49, 0.55}
+
+  local worktree = title:match(":%s*(.+)$")
+  if worktree then
+    worktree = worktree:match("^%s*(.-)%s*$")
+  end
+
+  if not worktree or worktree == "main" then
+    return colorCircleImage(rgb)
+  end
+
+  -- Deterministic shade: hash worktree name to pick alpha 0.5-0.85
+  local hash = 0
+  for i = 1, #worktree do
+    hash = (hash * 31 + string.byte(worktree, i)) % 2147483647
+  end
+  local shade = (hash % 4)  -- 0-3
+  local alpha = 0.5 + shade * 0.1167  -- 0.5, 0.617, 0.733, 0.85
+  return colorCircleImage(rgb, alpha)
+end
+
+function M.ghosttyWindowSwitcher()
+  local ghosttyWindows = {}
+  for _, app in ipairs(hs.application.runningApplications()) do
+    if app:name() == "Ghostty" then
+      for _, win in ipairs(app:allWindows()) do
+        local title = win:title() or ""
+        if title ~= "" then
+          table.insert(ghosttyWindows, win)
+        end
+      end
+    end
+  end
+
+  if #ghosttyWindows == 0 then
+    hs.alert.show("No Ghostty windows found")
+    return
+  end
+
+  local choices = {}
+  for _, win in ipairs(ghosttyWindows) do
+    local title = win:title() or ""
+    local repo = title:match("^([^:]+):")
+    if repo then repo = repo:match("^%s*(.-)%s*$") end
+
+    table.insert(choices, {
+      text = title,
+      subText = repo and ("~/Workspace/" .. repo) or "scratch / other",
+      windowId = win:id(),
+      _repo = repo,
+      image = ghosttyChoiceImage(title),
+    })
+  end
+
+  table.sort(choices, function(a, b)
+    local pa = repoPriority[a._repo] or defaultRepoPriority
+    local pb = repoPriority[b._repo] or defaultRepoPriority
+    if pa ~= pb then return pa < pb end
+    return a.text < b.text
+  end)
+
+  local chooser = hs.chooser.new(function(choice)
+    if not choice then return end
+    local win = utils.windowById(choice.windowId)
+    if win then win:focus() end
+  end)
+
+  chooser:placeholderText("Switch to Ghostty window...")
+  chooser:choices(choices)
+  chooser:show()
 end
 
 return M
