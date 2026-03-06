@@ -65,6 +65,27 @@ M.hiddenApps = {
   "Surfshark", "Steam", "Steam Helper",
 }
 
+-- Ghostty window colors: order = priority in chooser, color = visual tag
+-- Colors are {r, g, b} normalized 0-1
+M.colorPalette = {
+  blue   = {0.13, 0.59, 0.95},  -- #2196F3
+  green  = {0.30, 0.69, 0.31},  -- #4CAF50
+  amber  = {1.00, 0.60, 0.00},  -- #FF9800
+  purple = {0.61, 0.15, 0.69},  -- #9C27B0
+  red    = {0.96, 0.26, 0.21},  -- #F44336
+  teal   = {0.00, 0.59, 0.53},  -- #009688
+  pink   = {0.91, 0.12, 0.39},  -- #E91E63
+  gray   = {0.38, 0.49, 0.55},  -- #607D8B
+}
+
+M.repoColors = {
+  { repo = "scinfax",  color = "blue" },
+  { repo = "tacitus",  color = "green" },
+  { repo = "dotfiles", color = "amber" },
+  { repo = "alfred",   color = "teal" },
+  { repo = "journal",  color = "green" },
+}
+
 -- Machine-specific overrides (not committed)
 -- Create ~/.hammerspoon/local.lua to add/override layouts, preferred/hidden apps
 -- Example:
