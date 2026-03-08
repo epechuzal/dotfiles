@@ -571,11 +571,11 @@ function M.ghosttyWindowSwitcher()
     local frame = win:frame()
     local dims = string.format("%d×%d", frame.w, frame.h)
     local path = repo and (projectsDir .. "/" .. repo) or "scratch / other"
-    local state = win:isMinimized() and " [min]" or win:isFullScreen() and " [full]" or ""
+    local state = win:isMinimized() and "  [min]" or win:isFullScreen() and "  [full]" or ""
 
     table.insert(choices, {
-      text = title .. state,
-      subText = path .. "  ·  " .. dims,
+      text = title,
+      subText = path .. "  ·  " .. dims .. state,
       windowId = win:id(),
       _repo = repo,
       image = ghosttyChoiceImage(title),
