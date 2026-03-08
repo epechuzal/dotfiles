@@ -568,9 +568,13 @@ function M.ghosttyWindowSwitcher()
     local repo = title:match("^([^:]+):")
     if repo then repo = repo:match("^%s*(.-)%s*$") end
 
+    local frame = win:frame()
+    local dims = string.format("%d×%d", frame.w, frame.h)
+    local path = repo and (projectsDir .. "/" .. repo) or "scratch / other"
+
     table.insert(choices, {
       text = title,
-      subText = repo and (projectsDir .. "/" .. repo) or "scratch / other",
+      subText = path .. "  ·  " .. dims,
       windowId = win:id(),
       _repo = repo,
       image = ghosttyChoiceImage(title),
