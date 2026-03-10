@@ -38,7 +38,7 @@ local speedDial = {
   { -- Row 2: A S D
     { key = "a", label = "Tacitus", fn = function() hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
     { key = "s", label = "Zen", fn = function() hs.application.launchOrFocus("Zen") end },
-    { key = "d", label = nil },
+    { key = "d", label = "Exposé", fn = function() orchestrator.ghosttyExpose() end },
   },
   { -- Row 3: Z X C
     { key = "z", label = "Templates", fn = function() orchestrator.showTemplateChooser() end },
@@ -61,7 +61,7 @@ function modal:entered()
     table.insert(lines, table.concat(cols, "  "))
   end
   table.insert(lines, "")
-  table.insert(lines, string.format("%-2s %-12s", "R", "Reload"))
+  table.insert(lines, string.format("%-2s %-12s  %-2s %-12s", "M", "Minimize All", "R", "Reload"))
 
   cheatsheet = hs.alert.show(table.concat(lines, "\n"), cheatsheetStyle, hs.screen.mainScreen(), "indefinite")
 end
@@ -83,7 +83,9 @@ for _, row in ipairs(speedDial) do
   end
 end
 
--- Keep reload outside the grid
+-- Extra keys outside the grid
+modal:bind("", "m", function() modal:exit(); orchestrator.minimizeAll() end)
+modal:bind({"cmd", "ctrl"}, "m", function() modal:exit(); orchestrator.minimizeAll() end)
 modal:bind("", "r", function() modal:exit(); hs.reload() end)
 modal:bind({"cmd", "ctrl"}, "r", function() modal:exit(); hs.reload() end)
 modal:bind("", "escape", function() modal:exit() end)

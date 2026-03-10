@@ -500,6 +500,9 @@ function M.tileFrontmostApp()
   log("tile:" .. appName .. " (" .. count .. " windows)")
 end
 
+-- Snapshot cache for minimized windows (keyed by window ID)
+local snapshotCache = {}
+
 -- Colored circle image for Ghostty window switcher
 local colorImageCache = {}
 
@@ -603,6 +606,288 @@ function M.ghosttyWindowSwitcher()
   chooser:show()
 end
 
+-- Ghostty Exposé: fullscreen grid of window thumbnails
+function M.ghosttyExpose()
+  if M._exposeCanvas then
+    M._dismissExpose()
+    return
+  end
+
+  local ghosttyWindows = utils.findWindows("Ghostty")
+  if #ghosttyWindows == 0 then
+    hs.alert.show("No Ghostty windows found")
+    return
+  end
+
+  -- Sort by repo priority (same order as chooser)
+  table.sort(ghosttyWindows, function(a, b)
+    local repoA = (a:title() or ""):match("^([^:]+):")
+    local repoB = (b:title() or ""):match("^([^:]+):")
+    if repoA then repoA = repoA:match("^%s*(.-)%s*$") end
+    if repoB then repoB = repoB:match("^%s*(.-)%s*$") end
+    local pa = repoPriority[repoA] or defaultRepoPriority
+    local pb = repoPriority[repoB] or defaultRepoPriority
+    if pa ~= pb then return pa < pb end
+    return (a:title() or "") < (b:title() or "")
+  end)
+
+  local screen = hs.screen.mainScreen()
+  local sf = screen:fullFrame()
+  local count = math.min(#ghosttyWindows, 9)
+
+  -- Grid dimensions
+  local cols = count <= 3 and count or (count <= 4 and 2 or 3)
+  local rows = math.ceil(count / cols)
+
+  -- Card sizing
+  local padding = 30
+  local gap = 20
+  local labelH = 38
+  local maxCardW = 900
+  local cardW = math.min(maxCardW, (sf.w - padding * 2 - gap * (cols - 1)) / cols)
+  local thumbH = cardW / 3
+  local cardH = thumbH + labelH
+
+  local totalW = cols * cardW + (cols - 1) * gap
+  local totalH = rows * cardH + (rows - 1) * gap
+  local baseX = (sf.w - totalW) / 2
+  local baseY = (sf.h - totalH) / 2
+
+  -- Batch-gather cwd + foreground process for each Ghostty PID
+  -- Process tree: ghostty → login → zsh → foreground process
+  local procInfo = {} -- pid → { cwd = "...", proc = "..." }
+  local psOutput, _ = hs.execute(
+    "for pid in $(pgrep -x ghostty); do "
+    .. "login=$(pgrep -P $pid | head -1); "
+    .. "[ -z \"$login\" ] && continue; "
+    .. "shell=$(pgrep -P $login | head -1); "
+    .. "[ -z \"$shell\" ] && continue; "
+    .. "cwd=$(lsof -a -d cwd -Fn -p $shell 2>/dev/null | grep ^n | head -1 | cut -c2-); "
+    .. "fg=$(pgrep -P $shell | tail -1); "
+    .. "if [ -n \"$fg\" ]; then proc=$(ps -o comm= -p $fg 2>/dev/null); "
+    .. "else proc=$(ps -o comm= -p $shell 2>/dev/null); fi; "
+    .. "echo \"$pid|$cwd|$proc\"; "
+    .. "done"
+  )
+  if psOutput then
+    for line in psOutput:gmatch("[^\n]+") do
+      local pid, cwd, proc = line:match("^(%d+)|(.-)|(.*)")
+      if pid then
+        local home = os.getenv("HOME") or ""
+        if cwd and home ~= "" and cwd:sub(1, #home) == home then
+          cwd = "~" .. cwd:sub(#home + 1)
+        end
+        procInfo[tonumber(pid)] = { cwd = cwd or "", proc = proc or "" }
+      end
+    end
+  end
+
+  local canvas = hs.canvas.new(sf)
+  canvas:level(hs.canvas.windowLevels.overlay)
+
+  local elCount = 0
+  local borderMap = {}   -- card number → element index
+  local cardLookup = {} -- element index → card number
+  local windowByCard = {}
+
+  -- Backdrop
+  canvas:appendElements({
+    type = "rectangle",
+    frame = { x = 0, y = 0, w = sf.w, h = sf.h },
+    fillColor = { white = 0, alpha = 0.75 },
+    strokeWidth = 0,
+    trackMouseUp = true,
+    id = "backdrop",
+  })
+  elCount = elCount + 1
+
+  for i = 1, count do
+    local win = ghosttyWindows[i]
+    windowByCard[i] = win
+    local r = math.floor((i - 1) / cols)
+    local c = (i - 1) % cols
+    local x = baseX + c * (cardW + gap)
+    local y = baseY + r * (cardH + gap)
+    local title = win:title() or ""
+    local repo = title:match("^([^:]+):")
+    if repo then repo = repo:match("^%s*(.-)%s*$") end
+
+    -- Card background/border
+    canvas:appendElements({
+      type = "rectangle",
+      frame = { x = x, y = y, w = cardW, h = cardH },
+      fillColor = { white = 0.1, alpha = 0.95 },
+      strokeColor = { white = 0.3, alpha = 0.5 },
+      strokeWidth = 2,
+      roundedRectRadii = { xRadius = 10, yRadius = 10 },
+    })
+    elCount = elCount + 1
+    borderMap[i] = elCount
+
+    -- Thumbnail: crop to bottom 25% of window (last few lines of output)
+    local snapshot = win:snapshot() or snapshotCache[win:id()]
+    if snapshot then
+      local imgSize = snapshot:size()
+      -- Crop a bottom-left rectangle sized to display at 1:1 text scale
+      local winFrame = win:frame()
+      local scale = winFrame.w > 0 and (imgSize.w / winFrame.w) or 2
+      local cropW = math.min(cardW * scale, imgSize.w)
+      local cropH = math.min(thumbH * scale, imgSize.h)
+      local bottomPad = 20 * scale -- skip rounded corner area
+      local cropped = snapshot:croppedCopy({
+        x = 0,
+        y = math.max(0, imgSize.h - cropH - bottomPad),
+        w = cropW,
+        h = cropH,
+      })
+      canvas:appendElements({
+        type = "image",
+        frame = { x = x + 4, y = y + 4, w = cardW - 8, h = thumbH - 8 },
+        image = cropped or snapshot,
+        imageScaling = "scaleToFit",
+      })
+    else
+      canvas:appendElements({
+        type = "text",
+        frame = { x = x + 4, y = y + thumbH / 2 - 12, w = cardW - 8, h = 24 },
+        text = hs.styledtext.new("minimized", {
+          font = { name = ".AppleSystemUIFont", size = 14 },
+          color = { white = 0.4 },
+          paragraphStyle = { alignment = "center" },
+        }),
+      })
+    end
+    elCount = elCount + 1
+
+    -- Colored dot
+    local colorName = repoColorName[repo] or "gray"
+    local rgb = (layouts.colorPalette or {})[colorName] or {0.38, 0.49, 0.55}
+    canvas:appendElements({
+      type = "circle",
+      center = { x = x + 18, y = y + thumbH + labelH / 2 },
+      radius = 6,
+      fillColor = { red = rgb[1], green = rgb[2], blue = rgb[3], alpha = 1 },
+      strokeWidth = 0,
+      action = "fill",
+    })
+    elCount = elCount + 1
+
+    -- Label: title + cwd/process
+    local info = procInfo[win:application() and win:application():pid() or 0]
+    local line2 = ""
+    if info then
+      local parts = {}
+      if info.cwd ~= "" then table.insert(parts, info.cwd) end
+      if info.proc ~= "" then table.insert(parts, info.proc) end
+      line2 = table.concat(parts, "  ·  ")
+    end
+    local labelText = hs.styledtext.new(title .. "\n", {
+      font = { name = ".AppleSystemUIFontMonospaced-Regular", size = 13 },
+      color = { white = 1, alpha = 0.9 },
+    }) .. hs.styledtext.new(line2, {
+      font = { name = ".AppleSystemUIFontMonospaced-Regular", size = 11 },
+      color = { white = 1, alpha = 0.5 },
+    })
+    canvas:appendElements({
+      type = "text",
+      frame = { x = x + 32, y = y + thumbH + 2, w = cardW - 72, h = labelH - 4 },
+      text = labelText,
+    })
+    elCount = elCount + 1
+
+    -- Number badge
+    canvas:appendElements({
+      type = "text",
+      frame = { x = x + cardW - 36, y = y + thumbH + 4, w = 28, h = labelH - 8 },
+      text = hs.styledtext.new(tostring(i), {
+        font = { name = ".AppleSystemUIFontMonospaced-Regular", size = 14 },
+        color = { white = 1, alpha = 0.35 },
+        paragraphStyle = { alignment = "right" },
+      }),
+    })
+    elCount = elCount + 1
+
+    -- Interaction overlay (transparent hit area for hover + click)
+    canvas:appendElements({
+      type = "rectangle",
+      frame = { x = x, y = y, w = cardW, h = cardH },
+      fillColor = { white = 0, alpha = 0 },
+      strokeWidth = 0,
+      roundedRectRadii = { xRadius = 10, yRadius = 10 },
+      trackMouseEnterExit = true,
+      trackMouseUp = true,
+      id = "card_" .. i,
+    })
+    elCount = elCount + 1
+    cardLookup[elCount] = i
+  end
+
+  -- Mouse callback
+  canvas:mouseCallback(function(c, msg, id, x, y)
+    local cardNum = nil
+    if type(id) == "string" then
+      cardNum = tonumber(id:match("card_(%d+)"))
+    elseif type(id) == "number" then
+      cardNum = cardLookup[id]
+    end
+
+    if msg == "mouseEnter" and cardNum and borderMap[cardNum] then
+      c:elementAttribute(borderMap[cardNum], "strokeColor", { white = 1, alpha = 0.9 })
+      c:elementAttribute(borderMap[cardNum], "strokeWidth", 3)
+    elseif msg == "mouseExit" and cardNum and borderMap[cardNum] then
+      c:elementAttribute(borderMap[cardNum], "strokeColor", { white = 0.3, alpha = 0.5 })
+      c:elementAttribute(borderMap[cardNum], "strokeWidth", 2)
+    elseif msg == "mouseUp" then
+      if cardNum and windowByCard[cardNum] then
+        local win = windowByCard[cardNum]
+        M._dismissExpose()
+        win:focus()
+        log("ghostty-expose:" .. (win:title() or "?"))
+      else
+        M._dismissExpose()
+      end
+    end
+  end)
+
+  -- Keyboard handler
+  local keyTap = hs.eventtap.new({hs.eventtap.event.types.keyDown}, function(event)
+    local keyCode = event:getKeyCode()
+    local key = event:getCharacters()
+
+    if keyCode == 53 then -- escape
+      M._dismissExpose()
+      return true
+    end
+
+    local num = tonumber(key)
+    if num and num >= 1 and num <= count and windowByCard[num] then
+      local win = windowByCard[num]
+      M._dismissExpose()
+      win:focus()
+      log("ghostty-expose:" .. (win:title() or "?"))
+      return true
+    end
+
+    return true -- consume all keys while expose is open
+  end)
+
+  M._exposeCanvas = canvas
+  M._exposeKeyTap = keyTap
+  keyTap:start()
+  canvas:show()
+end
+
+function M._dismissExpose()
+  if M._exposeCanvas then
+    M._exposeCanvas:delete()
+    M._exposeCanvas = nil
+  end
+  if M._exposeKeyTap then
+    M._exposeKeyTap:stop()
+    M._exposeKeyTap = nil
+  end
+end
+
 local scratchLaunching = false
 
 function M.scratchTerminal()
@@ -669,6 +954,39 @@ function M.scratchTerminal()
       hs.alert.show("Scratch terminal didn't open in time")
     end
   end)
+end
+
+function M.minimizeAll()
+  local keepSet = {}
+  for _, name in ipairs(layouts.preferredApps or {}) do
+    if name ~= "Ghostty" then
+      keepSet[name] = true
+    end
+  end
+  -- Always keep Hammerspoon itself
+  keepSet["Hammerspoon"] = true
+
+  -- Cache snapshots of visible windows before hiding (exposé needs them)
+  for _, win in ipairs(hs.window.allWindows()) do
+    if not win:isMinimized() then
+      local snap = win:snapshot()
+      if snap then snapshotCache[win:id()] = snap end
+    end
+  end
+
+  -- Hide apps (not minimize) — dimmed dock icon, no thumbnail clutter
+  local count = 0
+  for _, app in ipairs(hs.application.runningApplications()) do
+    local appName = app:name() or ""
+    if not keepSet[appName] and not app:isHidden() then
+      local visibleCount = #app:visibleWindows()
+      app:hide()
+      count = count + visibleCount
+    end
+  end
+
+  hs.alert.show("Hidden " .. count .. " windows")
+  log("minimize-all:" .. count)
 end
 
 return M
