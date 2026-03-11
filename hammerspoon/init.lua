@@ -163,4 +163,8 @@ function openIDE()
   orchestrator.ideForGhostty()
 end
 
+function centerGhosttyWindow(titlePrefix)
+  orchestrator.centerGhosttyWindow(titlePrefix)
+end
+
 hs.alert.show("Hammerspoon loaded")

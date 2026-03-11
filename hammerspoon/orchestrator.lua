@@ -956,6 +956,30 @@ function M.scratchTerminal()
   end)
 end
 
+-- Center a Ghostty window by title prefix (called from Alfred via hs CLI)
+-- Polls until the window appears, then centers it at 1400x900
+function M.centerGhosttyWindow(titlePrefix)
+  local attempts = 0
+  hs.timer.doEvery(0.3, function(timer)
+    attempts = attempts + 1
+    local wins = utils.findWindows("Ghostty", "^" .. titlePrefix)
+    if #wins > 0 then
+      timer:stop()
+      local screen = hs.screen.mainScreen():frame()
+      local w, h = 1400, 900
+      wins[1]:setFrame({
+        x = screen.x + (screen.w - w) / 2,
+        y = screen.y + (screen.h - h) / 2,
+        w = w,
+        h = h,
+      })
+      log("wt-center:" .. titlePrefix)
+    elseif attempts > 20 then
+      timer:stop()
+    end
+  end)
+end
+
 function M.minimizeAll()
   local keepSet = {}
   for _, name in ipairs(layouts.preferredApps or {}) do
