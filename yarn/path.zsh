@@ -1,7 +1,1 @@
-# sup yarn
-# https://yarnpkg.com
-
-if (( $+commands[yarn] ))
-then
-  export PATH="$PATH:`yarn global bin`"
-fi
+# yarn global was removed in yarn v4 (berry) — nothing to add to PATH
