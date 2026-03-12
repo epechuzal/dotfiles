@@ -37,6 +37,7 @@ function M.positionWindow(win, position, screen)
   }
 
   win:setFrame(newFrame)
+  win:raise()
   return true
 end
 
