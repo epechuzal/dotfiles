@@ -497,11 +497,11 @@ function M.tileFrontmostApp()
     end
   end
 
-  -- Raise all windows above other apps: focus in reverse so wins[1] ends on top
-  for i = #wins, 1, -1 do
+  -- Raise in order so each subsequent window peeks in front of the previous
+  for i = 1, #wins do
     wins[i]:raise()
   end
-  wins[1]:focus()
+  wins[#wins]:focus()
   log("tile:" .. appName .. " (" .. count .. " windows)")
 end
 
