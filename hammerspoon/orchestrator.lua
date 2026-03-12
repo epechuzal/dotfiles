@@ -482,15 +482,17 @@ function M.tileFrontmostApp()
     utils.positionWindow(wins[3], {0, 0.5, 0.5, 0.5}, screen)
     utils.positionWindow(wins[4], {0.5, 0.5, 0.5, 0.5}, screen)
   else
-    -- 5+: fanned cascade
-    local minW = f.w * 0.5
-    local offsetX = (f.w - minW) / (count - 1)
+    -- 5+: diagonal fan (like fanning a deck of cards)
+    local winW = math.floor(f.w * 0.4)
+    local winH = math.floor(f.h * 0.625)
+    local offsetX = math.min(200, math.floor((f.w - winW) / math.max(count - 1, 1)))
+    local offsetY = math.min(60, math.floor((f.h - winH) / math.max(count - 1, 1)))
     for i, win in ipairs(wins) do
       win:setFrame({
         x = f.x + (i - 1) * offsetX,
-        y = f.y,
-        w = minW,
-        h = f.h,
+        y = f.y + (i - 1) * offsetY,
+        w = winW,
+        h = winH,
       })
     end
   end

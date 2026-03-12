@@ -8,6 +8,15 @@ local banish = require("banish")
 -- Start banish watcher
 banish.start()
 
+-- Auto-reload on config changes (watch real source dir, not symlinks)
+local configSourceDir = hs.execute("readlink " .. hs.configdir .. "/init.lua"):match("(.+)/[^/]+$")
+local configWatcher = hs.pathwatcher.new(configSourceDir or hs.configdir, function(files)
+  for _, f in ipairs(files) do
+    if f:match("%.lua$") then hs.reload(); return end
+  end
+end)
+configWatcher:start()
+
 -- Modal with cheat sheet
 local modal = hs.hotkey.modal.new()
 
@@ -95,36 +104,45 @@ local holdTimer = nil
 local modalActive = false
 
 local modWatcher = hs.eventtap.new({hs.eventtap.event.types.flagsChanged}, function(event)
-  local flags = event:getFlags()
-  local ctrlCmd = flags.ctrl and flags.cmd and not flags.alt and not flags.shift
+  local ok, err = pcall(function()
+    local flags = event:getFlags()
+    local ctrlCmd = flags.ctrl and flags.cmd and not flags.alt and not flags.shift
 
-  if ctrlCmd and not modalActive then
-    -- Started holding ctrl+cmd, start timer
-    if holdTimer then holdTimer:stop() end
-    holdTimer = hs.timer.doAfter(0.15, function()
-      modalActive = true
-      modal:enter()
-    end)
-  elseif not ctrlCmd then
-    -- Released modifiers
-    if holdTimer then
-      holdTimer:stop()
-      holdTimer = nil
-    end
-    if modalActive then
-      -- Give a brief window to press action key after release
-      hs.timer.doAfter(1.5, function()
-        if modalActive then
-          modalActive = false
-          modal:exit()
-        end
+    if ctrlCmd and not modalActive then
+      if holdTimer then holdTimer:stop() end
+      holdTimer = hs.timer.doAfter(0.15, function()
+        modalActive = true
+        modal:enter()
       end)
+    elseif not ctrlCmd then
+      if holdTimer then
+        holdTimer:stop()
+        holdTimer = nil
+      end
+      if modalActive then
+        hs.timer.doAfter(1.5, function()
+          if modalActive then
+            modalActive = false
+            modal:exit()
+          end
+        end)
+      end
     end
+  end)
+  if not ok then
+    print("modWatcher error: " .. tostring(err))
   end
-
   return false
 end)
 modWatcher:start()
+
+-- Watchdog: restart eventtap if it silently dies
+hs.timer.doEvery(30, function()
+  if not modWatcher:isEnabled() then
+    print("modWatcher died, restarting")
+    modWatcher:start()
+  end
+end)
 
 -- Also support ctrl+cmd+` as direct trigger (no hold delay)
 hs.hotkey.bind({"cmd", "ctrl"}, "`", function()
