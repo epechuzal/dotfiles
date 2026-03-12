@@ -1,0 +1,28 @@
+# Infra Dashboard — xbar plugin config
+#
+# To use: copy this file to one of:
+#   ~/.xbar-infra.conf          (default, committed via install.sh)
+#   ~/.xbar-infra.local.conf    (machine-specific override, not committed)
+#
+# If the .local.conf file exists, it takes precedence entirely.
+# Only include the sections you need — empty/missing sections are skipped.
+
+# --- GitHub Actions ---
+# Format: owner/repo  Workflow Name
+# Workflow name must match `gh workflow list` exactly.
+[github-actions]
+epechuzal/scinfax Deploy to Production
+
+# --- Servers ---
+# Format: hostname
+# Checks SSH reachability and lists Docker containers.
+# The hostname must be resolvable (e.g., via Tailscale, /etc/hosts, SSH config).
+[servers]
+jamestown
+
+# --- Custom scripts ---
+# Format: /path/to/script  Label
+# Exit 0 = green, non-zero = red.
+# Stdout lines appear as submenu items.
+# [scripts]
+# ~/.local/bin/check-backups  Backups

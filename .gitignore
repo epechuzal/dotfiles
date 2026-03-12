@@ -13,7 +13,7 @@ localrc.symlink
 hammerspoon/local.lua
 
 # Machine-specific xbar config
-xbar/github-actions.local.conf
+xbar/infra-dashboard.local.conf
 
 # Work-specific config (stays local, not pushed to remote)
 str/
