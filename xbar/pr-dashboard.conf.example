@@ -1,0 +1,13 @@
+# PR Dashboard — xbar plugin config
+#
+# To use: copy this file to one of:
+#   ~/.xbar-pr.conf          (default, committed via install.sh)
+#   ~/.xbar-pr.local.conf    (machine-specific override, not committed)
+#
+# If the .local.conf file exists, it takes precedence entirely.
+
+# GitHub username (used for review requests; PRs use @me which works via gh auth)
+# github_user=myuser
+
+# GitLab username (leave blank or omit to skip GitLab)
+# gitlab_user=myuser

@@ -140,6 +140,20 @@ To add a new topic (e.g., "python"):
    - `python/config.symlink` - Symlink to `~/.config`
 3. Files will be auto-discovered and loaded by zsh on next shell start
 
+## Machine-Specific vs Committed Code
+
+**Everything committed to this repo must work on any machine.** No work-specific repos, hostnames, usernames, API tokens, cluster names, or employer-specific references in committed code. There is a hard wall between personal and work.
+
+Machine-specific configuration goes in:
+- `~/.localrc` — env vars, tokens, secrets
+- `*.local.conf` files in `$HOME` — e.g., `~/.xbar-infra.local.conf`
+- `git/gitconfig.local.symlink` — git identity (gitignored)
+
+Committed code should provide:
+- Generic example configs with everything commented out
+- Config file patterns that load a `.local` override when present
+- Scripts/plugins that read config at runtime, not hardcoded values
+
 ## Working with This Repo
 
 ### Before Making Changes

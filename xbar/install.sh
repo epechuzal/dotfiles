@@ -46,14 +46,19 @@ for src in "$SOURCE_DIR/plugins/"*.sh; do
   fi
 done
 
-# Create default config from example if neither config exists
-CONFIG="$HOME/.xbar-infra.conf"
-LOCAL_CONFIG="$HOME/.xbar-infra.local.conf"
+# Create default configs from examples if neither config exists
+for example in "$SOURCE_DIR"/*.conf.example; do
+  [ -f "$example" ] || continue
+  basename=$(basename "$example" .conf.example)
+  short=${basename%-dashboard}
+  config="$HOME/.xbar-${short}.conf"
+  local_config="$HOME/.xbar-${short}.local.conf"
 
-if [ ! -f "$CONFIG" ] && [ ! -f "$LOCAL_CONFIG" ]; then
-  echo "  Creating default infra dashboard config from example."
-  cp "$SOURCE_DIR/infra-dashboard.conf.example" "$CONFIG"
-  echo "  Edit ~/.xbar-infra.conf or create ~/.xbar-infra.local.conf for machine-specific setup."
-fi
+  if [ ! -f "$config" ] && [ ! -f "$local_config" ]; then
+    echo "  Creating default $basename config from example."
+    cp "$example" "$config"
+    echo "  Edit $config or create $local_config for machine-specific setup."
+  fi
+done
 
 exit 0

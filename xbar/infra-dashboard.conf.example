@@ -10,15 +10,21 @@
 # --- GitHub Actions ---
 # Format: owner/repo  Workflow Name
 # Workflow name must match `gh workflow list` exactly.
-[github-actions]
-epechuzal/scinfax Deploy to Production
+# [github-actions]
+# owner/repo  Deploy to Production
+
+# --- ECS Clusters ---
+# Format: region cluster-name
+# Checks all services: desired vs running task count.
+# [ecs]
+# us-east-1 my-cluster
 
 # --- Servers ---
 # Format: hostname
 # Checks SSH reachability and lists Docker containers.
 # The hostname must be resolvable (e.g., via Tailscale, /etc/hosts, SSH config).
-[servers]
-jamestown
+# [servers]
+# myhost
 
 # --- Custom scripts ---
 # Format: /path/to/script  Label

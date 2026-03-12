@@ -3,8 +3,8 @@
 # <xbar.title>Infra Dashboard</xbar.title>
 # <xbar.version>v2.0</xbar.version>
 # <xbar.author>Eddy Pechuzal</xbar.author>
-# <xbar.desc>Unified infrastructure monitor — GitHub Actions, servers, Docker, custom scripts</xbar.desc>
-# <xbar.dependencies>gh,jq</xbar.dependencies>
+# <xbar.desc>Unified infrastructure monitor — GitHub Actions, ECS, servers, Docker, custom scripts</xbar.desc>
+# <xbar.dependencies>gh,jq,aws</xbar.dependencies>
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 [ -f "$HOME/.localrc" ] && source "$HOME/.localrc"
@@ -44,6 +44,7 @@ current_section=""
 github_actions_lines=()
 server_lines=()
 script_lines=()
+ecs_lines=()
 
 while IFS= read -r line; do
   [[ "$line" =~ ^[[:space:]]*# ]] && continue
@@ -56,11 +57,13 @@ while IFS= read -r line; do
     github-actions) github_actions_lines+=("$line") ;;
     servers)        server_lines+=("$line") ;;
     scripts)        script_lines+=("$line") ;;
+    ecs)            ecs_lines+=("$line") ;;
   esac
 done < "$CONFIG_FILE"
 
 # --- Collect output per section ---
 ga_entries=""
+ecs_entries=""
 server_entries=""
 script_entries=""
 
@@ -152,6 +155,75 @@ if [ ${#github_actions_lines[@]} -gt 0 ]; then
       ga_entries+="--Open in GitHub | href=$url\n"
       if [ "$conclusion" = "failure" ]; then
         ga_entries+="--🔁 Rerun failed jobs | bash=/opt/homebrew/bin/gh param1=run param2=rerun param3=$run_id param4=--repo param5=$repo param6=--failed terminal=false refresh=true\n"
+      fi
+    done
+  fi
+fi
+
+# --- ECS Clusters ---
+if [ ${#ecs_lines[@]} -gt 0 ]; then
+  if ! command -v aws &>/dev/null; then
+    ecs_entries+="aws CLI not found | color=red\n"
+    has_failure=true
+  else
+    for ecs_line in "${ecs_lines[@]}"; do
+      region=$(echo "$ecs_line" | awk '{print $1}')
+      cluster=$(echo "$ecs_line" | awk '{print $2}')
+      [ -z "$region" ] || [ -z "$cluster" ] && continue
+
+      service_arns=$(aws ecs list-services \
+        --cluster "$cluster" --region "$region" \
+        --query 'serviceArns' --output json 2>/dev/null)
+
+      if [ $? -ne 0 ] || [ -z "$service_arns" ] || [ "$service_arns" = "[]" ]; then
+        ecs_entries+="⚪ $cluster — no services | color=gray\n"
+        continue
+      fi
+
+      service_names=$(echo "$service_arns" | jq -r '.[] | split("/") | last')
+      names_array=()
+      while IFS= read -r sn; do
+        [ -n "$sn" ] && names_array+=("$sn")
+      done <<< "$service_names"
+
+      svc_json=$(aws ecs describe-services \
+        --cluster "$cluster" --region "$region" \
+        --services "${names_array[@]}" \
+        --query 'services[].{name:serviceName,desired:desiredCount,running:runningCount,pending:pendingCount}' \
+        --output json 2>/dev/null)
+
+      if [ $? -ne 0 ] || [ -z "$svc_json" ]; then
+        ecs_entries+="❌ $cluster — failed to query | color=red\n"
+        has_failure=true
+        continue
+      fi
+
+      problems=0
+      total=$(echo "$svc_json" | jq 'length')
+
+      for row in $(echo "$svc_json" | jq -c '.[]'); do
+        name=$(echo "$row" | jq -r '.name')
+        desired=$(echo "$row" | jq -r '.desired')
+        running=$(echo "$row" | jq -r '.running')
+        pending=$(echo "$row" | jq -r '.pending')
+
+        if [ "$running" -lt "$desired" ]; then
+          problems=$((problems + 1))
+          if [ "$pending" -gt 0 ]; then
+            ecs_entries+="--⚠️ $name — $running/$desired running ($pending pending) | color=orange\n"
+          else
+            ecs_entries+="--❌ $name — $running/$desired running | color=red\n"
+          fi
+        else
+          ecs_entries+="--✅ $name — $running instances | color=green\n"
+        fi
+      done
+
+      if [ "$problems" -gt 0 ]; then
+        ecs_entries="⚠️ $cluster — $problems of $total service(s) degraded | color=orange\n$ecs_entries"
+        has_warning=true
+      else
+        ecs_entries="✅ $cluster — $total services healthy | color=green\n$ecs_entries"
       fi
     done
   fi
@@ -266,14 +338,20 @@ if [ -n "$ga_entries" ]; then
   echo -en "$ga_entries"
 fi
 
-if [ -n "$server_entries" ]; then
+if [ -n "$ecs_entries" ]; then
   [ -n "$ga_entries" ] && echo "---"
+  echo "📦 ECS | disabled=true"
+  echo -en "$ecs_entries"
+fi
+
+if [ -n "$server_entries" ]; then
+  ([ -n "$ga_entries" ] || [ -n "$ecs_entries" ]) && echo "---"
   echo "🖥 Servers | disabled=true"
   echo -en "$server_entries"
 fi
 
 if [ -n "$script_entries" ]; then
-  ([ -n "$ga_entries" ] || [ -n "$server_entries" ]) && echo "---"
+  ([ -n "$ga_entries" ] || [ -n "$ecs_entries" ] || [ -n "$server_entries" ]) && echo "---"
   echo "🔌 Custom | disabled=true"
   echo -en "$script_entries"
 fi
