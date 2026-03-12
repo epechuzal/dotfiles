@@ -1,6 +1,17 @@
 hs.ipc.cliInstall()
 hs.hotkey.alertDuration = 0
 
+-- Persistent log for debugging crashes (survives restarts)
+local crashLog = os.getenv("HOME") .. "/.hammerspoon/crash.log"
+local function clog(msg)
+  local f = io.open(crashLog, "a")
+  if f then
+    f:write(os.date("%Y-%m-%d %H:%M:%S") .. "  " .. msg .. "\n")
+    f:close()
+  end
+end
+clog("=== Hammerspoon loaded ===")
+
 local orchestrator = require("orchestrator")
 local layouts = require("layouts")
 local banish = require("banish")
@@ -10,9 +21,14 @@ banish.start()
 
 -- Auto-reload on config changes (watch real source dir, not symlinks)
 local configSourceDir = hs.execute("readlink " .. hs.configdir .. "/init.lua"):match("(.+)/[^/]+$")
+clog("watching: " .. (configSourceDir or hs.configdir))
 local configWatcher = hs.pathwatcher.new(configSourceDir or hs.configdir, function(files)
   for _, f in ipairs(files) do
-    if f:match("%.lua$") then hs.reload(); return end
+    if f:match("%.lua$") then
+      clog("config changed: " .. f .. " — reloading")
+      hs.reload()
+      return
+    end
   end
 end)
 configWatcher:start()
@@ -103,44 +119,56 @@ modal:bind("", "escape", function() modal:exit() end)
 local holdTimer = nil
 local modalActive = false
 
-local modWatcher = hs.eventtap.new({hs.eventtap.event.types.flagsChanged}, function(event)
-  local ok, err = pcall(function()
-    local flags = event:getFlags()
-    local ctrlCmd = flags.ctrl and flags.cmd and not flags.alt and not flags.shift
+local lastEventTapHeartbeat = hs.timer.secondsSinceEpoch()
 
-    if ctrlCmd and not modalActive then
-      if holdTimer then holdTimer:stop() end
-      holdTimer = hs.timer.doAfter(0.15, function()
-        modalActive = true
-        modal:enter()
-      end)
-    elseif not ctrlCmd then
-      if holdTimer then
-        holdTimer:stop()
-        holdTimer = nil
-      end
-      if modalActive then
-        hs.timer.doAfter(1.5, function()
-          if modalActive then
-            modalActive = false
-            modal:exit()
-          end
+local function createModWatcher()
+  return hs.eventtap.new({hs.eventtap.event.types.flagsChanged}, function(event)
+    lastEventTapHeartbeat = hs.timer.secondsSinceEpoch()
+    local ok, err = pcall(function()
+      local flags = event:getFlags()
+      local ctrlCmd = flags.ctrl and flags.cmd and not flags.alt and not flags.shift
+
+      if ctrlCmd and not modalActive then
+        if holdTimer then holdTimer:stop() end
+        holdTimer = hs.timer.doAfter(0.15, function()
+          modalActive = true
+          modal:enter()
         end)
+      elseif not ctrlCmd then
+        if holdTimer then
+          holdTimer:stop()
+          holdTimer = nil
+        end
+        if modalActive then
+          hs.timer.doAfter(1.5, function()
+            if modalActive then
+              modalActive = false
+              modal:exit()
+            end
+          end)
+        end
       end
+    end)
+    if not ok then
+      clog("modWatcher error: " .. tostring(err))
     end
+    return false
   end)
-  if not ok then
-    print("modWatcher error: " .. tostring(err))
-  end
-  return false
-end)
+end
+
+local modWatcher = createModWatcher()
 modWatcher:start()
 
--- Watchdog: restart eventtap if it silently dies
+-- Heartbeat watchdog: if no modifier key events in 120s, recreate the eventtap
+-- (isEnabled() can lie — macOS may drop the event stream silently)
 hs.timer.doEvery(30, function()
-  if not modWatcher:isEnabled() then
-    print("modWatcher died, restarting")
+  local elapsed = hs.timer.secondsSinceEpoch() - lastEventTapHeartbeat
+  if not modWatcher:isEnabled() or elapsed > 120 then
+    clog("watchdog: restarting eventtap (enabled=" .. tostring(modWatcher:isEnabled()) .. " elapsed=" .. string.format("%.0f", elapsed) .. "s)")
+    modWatcher:stop()
+    modWatcher = createModWatcher()
     modWatcher:start()
+    lastEventTapHeartbeat = hs.timer.secondsSinceEpoch()
   end
 end)
 
