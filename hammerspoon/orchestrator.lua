@@ -5,9 +5,6 @@ local M = {}
 
 local logFile = os.getenv("HOME") .. "/.hammerspoon/usage.log"
 
--- Tile toggle snapshot: keyed by "appName:screenId"
-local tileSnapshots = {}
-
 local function log(entry)
   local f = io.open(logFile, "a")
   if f then
@@ -407,61 +404,23 @@ function M.tileFrontmostApp()
   local app = frontWin:application()
   local appName = app and app:name() or ""
   local screen = frontWin:screen()
-  local snapshotKey = appName .. ":" .. tostring(screen:id())
-
   -- Collect windows of this app on this screen
   local wins = appWindowsOnScreen(appName, screen)
   if #wins == 0 then return end
 
-  -- Check for toggle: restore if snapshot exists and windows match
-  local snap = tileSnapshots[snapshotKey]
-  if snap then
-    local snapIds = {}
-    for _, s in ipairs(snap) do snapIds[s.id] = true end
-    local currentIds = {}
-    for _, w in ipairs(wins) do currentIds[w:id()] = true end
-
-    -- Check windows haven't changed
-    local match = true
-    for id in pairs(snapIds) do
-      if not currentIds[id] then match = false; break end
-    end
-    for id in pairs(currentIds) do
-      if not snapIds[id] then match = false; break end
-    end
-
-    if match then
-      -- Restore
-      for _, s in ipairs(snap) do
-        local win = hs.window.get(s.id)
-        if win then
-          win:setFrame(s.frame)
-          if s.minimized then win:minimize() end
-        end
-      end
-      tileSnapshots[snapshotKey] = nil
-      log("tile-restore:" .. appName .. " (" .. #snap .. " windows)")
-      return
-    else
-      -- Windows changed, discard snapshot
-      tileSnapshots[snapshotKey] = nil
-    end
-  end
-
-  -- Save snapshot
-  local snapshot = {}
-  for _, win in ipairs(wins) do
-    table.insert(snapshot, {
-      id = win:id(),
-      frame = win:frame(),
-      minimized = win:isMinimized(),
-    })
-  end
-  tileSnapshots[snapshotKey] = snapshot
-
   -- Unminimize all
   for _, win in ipairs(wins) do
     if win:isMinimized() then win:unminimize() end
+  end
+
+  -- Move the current window to the end so it ends up on top
+  local frontId = frontWin:id()
+  for i, win in ipairs(wins) do
+    if win:id() == frontId then
+      table.remove(wins, i)
+      table.insert(wins, win)
+      break
+    end
   end
 
   local f = screen:frame()
@@ -482,14 +441,14 @@ function M.tileFrontmostApp()
     utils.positionWindow(wins[3], {0, 0.5, 0.5, 0.5}, screen)
     utils.positionWindow(wins[4], {0.5, 0.5, 0.5, 0.5}, screen)
   else
-    -- 5+: diagonal fan (like fanning a deck of cards)
+    -- 5+: diagonal fan from right to left (top card = current window)
     local winW = math.floor(f.w * 0.4)
     local winH = math.floor(f.h * 0.625)
     local offsetX = math.min(200, math.floor((f.w - winW) / math.max(count - 1, 1)))
     local offsetY = math.min(60, math.floor((f.h - winH) / math.max(count - 1, 1)))
     for i, win in ipairs(wins) do
       win:setFrame({
-        x = f.x + (i - 1) * offsetX,
+        x = f.x + f.w - winW - (i - 1) * offsetX,
         y = f.y + (i - 1) * offsetY,
         w = winW,
         h = winH,
@@ -497,11 +456,15 @@ function M.tileFrontmostApp()
     end
   end
 
-  -- Raise in order so each subsequent window peeks in front of the previous
+  -- Stagger raises so the window server processes them in order
   for i = 1, #wins do
-    wins[i]:raise()
+    hs.timer.doAfter(i * 0.04, function()
+      wins[i]:raise()
+    end)
   end
-  wins[#wins]:focus()
+  hs.timer.doAfter(#wins * 0.04 + 0.05, function()
+    wins[#wins]:focus()
+  end)
   log("tile:" .. appName .. " (" .. count .. " windows)")
 end
 
