@@ -74,5 +74,7 @@ cask "vlc"
 cask "webstorm"
 # Native desktop client for WhatsApp
 cask "whatsapp"
+# Put the output from any script or program into your macOS Menu Bar
+cask "xbar"
 # Gecko based web browser
 cask "zen"

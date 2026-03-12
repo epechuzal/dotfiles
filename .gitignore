@@ -12,5 +12,8 @@ localrc.symlink
 # Machine-specific Hammerspoon overrides
 hammerspoon/local.lua
 
+# Machine-specific xbar config
+xbar/github-actions.local.conf
+
 # Work-specific config (stays local, not pushed to remote)
 str/
