@@ -76,5 +76,17 @@ defaults write com.lwouis.alt-tab-macos startAtLogin -bool true
 defaults write com.lwouis.alt-tab-macos menubarIconShown -bool true
 defaults write com.lwouis.alt-tab-macos blacklist -string '[{"ignore":"0","bundleIdentifier":"com.McAfee.McAfeeSafariHost","hide":"1"},{"ignore":"0","bundleIdentifier":"com.apple.finder","hide":"2"},{"ignore":"2","bundleIdentifier":"com.microsoft.rdc.macos","hide":"0"},{"ignore":"2","bundleIdentifier":"com.teamviewer.TeamViewer","hide":"0"},{"ignore":"2","bundleIdentifier":"org.virtualbox.app.VirtualBoxVM","hide":"0"},{"ignore":"2","bundleIdentifier":"com.parallels.","hide":"0"},{"ignore":"2","bundleIdentifier":"com.citrix.XenAppViewer","hide":"0"},{"ignore":"2","bundleIdentifier":"com.citrix.receiver.icaviewer.mac","hide":"0"},{"ignore":"2","bundleIdentifier":"com.nicesoftware.dcvviewer","hide":"0"},{"ignore":"2","bundleIdentifier":"com.vmware.fusion","hide":"0"},{"ignore":"2","bundleIdentifier":"com.apple.ScreenSharing","hide":"0"},{"ignore":"2","bundleIdentifier":"com.utmapp.UTM","hide":"0"},{"ignore":"0","bundleIdentifier":"com.superduper.superwhisper","hide":"1"},{"ignore":"0","bundleIdentifier":"com.apple.ScreenContinuity","hide":"1"},{"ignore":"0","bundleIdentifier":"com.codeweavers.CrossOver","hide":"1"}]'
 
+# Login items — ensure apps listed in macos/login-items start on boot
+LOGIN_ITEMS_FILE="$(cd "$(dirname "$0")" && pwd)/login-items"
+if [ -f "$LOGIN_ITEMS_FILE" ]; then
+  while IFS= read -r app || [ -n "$app" ]; do
+    app=$(echo "$app" | sed 's/#.*//' | xargs)
+    [ -z "$app" ] && continue
+    if [ -d "/Applications/$app.app" ]; then
+      osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"/Applications/$app.app\", hidden:false}" 2>/dev/null || true
+    fi
+  done < "$LOGIN_ITEMS_FILE"
+fi
+
 # Apply hotkey changes without logout
 /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u

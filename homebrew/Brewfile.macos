@@ -38,6 +38,8 @@ cask "grandperspective"
 cask "hammerspoon"
 # Tool to prevent the system from going into sleep mode
 cask "keepingyouawake"
+# Keyboard configurator for ZSA keyboards (Voyager, Moonlander, etc.)
+cask "keymapp"
 # Privacy-first, open-source platform for knowledge sharing and management
 cask "logseq"
 # Knowledge base that works on top of a local folder of plain text Markdown files

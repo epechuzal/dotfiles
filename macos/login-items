@@ -1,0 +1,12 @@
+# Apps to register as macOS login items.
+# One app name per line (must match /Applications/<name>.app).
+# Skipped if the app isn't installed on this machine.
+# This list is declarative — items not listed here will be removed.
+
+Alfred 5
+AudioPriorityBar
+Hammerspoon
+Keymapp
+KeepingYouAwake
+Scroll Reverser
+xbar
