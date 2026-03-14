@@ -13,6 +13,7 @@ function M.start()
     if eventType == hs.application.watcher.deactivated then
       for _, name in ipairs(M.apps) do
         if appName == name and app then
+          if name == "Spotify" and hs.spotify.isPlaying() then return end
           app:hide()
           return
         end
