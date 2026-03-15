@@ -15,6 +15,7 @@ clog("=== Hammerspoon loaded ===")
 local orchestrator = require("orchestrator")
 local layouts = require("layouts")
 local banish = require("banish")
+local worktree = require("worktree")
 
 -- Start banish watcher
 banish.start()
@@ -57,7 +58,7 @@ local cheatsheetStyle = {
 local speedDial = {
   { -- Row 1: Q W E
     { key = "q", label = "IDE+Ghostty", fn = function() orchestrator.ideForGhostty() end },
-    { key = "w", label = "Ghostty", fn = function() orchestrator.ghosttyWindowSwitcher() end },
+    { key = "w", label = "Worktree", fn = function() worktree.show() end },
     { key = "e", label = "Scratch", fn = function() orchestrator.scratchTerminal() end },
   },
   { -- Row 2: A S D
@@ -190,6 +191,35 @@ function modal:exited()
   origExit(self)
 end
 
+-- Voyager speed dial: Hyper (ctrl+cmd+alt+shift) + key = direct action, no modal
+local hyper = {"ctrl", "cmd", "alt", "shift"}
+
+local voyagerDial = {
+  { key = "w", label = "Worktree", fn = function() worktree.show() end },
+  { key = "g", label = "Ghostty", fn = function() orchestrator.ghosttyExpose() end },
+  { key = "t", label = "Terminal", fn = function() orchestrator.scratchTerminal() end },
+  { key = "b", label = "Browser", fn = function() hs.application.launchOrFocus("Zen") end },
+  { key = "v", label = "Vault", fn = function() orchestrator.activateNamedLayout("tacitus") end },
+  { key = "n", label = "Templates", fn = function() orchestrator.showTemplateChooser() end },
+  { key = "m", label = "Minimize", fn = function() orchestrator.minimizeAll() end },
+  { key = "x", label = "60/40", fn = function() orchestrator.quickSplit() end },
+  { key = "c", label = "Tile", fn = function() orchestrator.tileFrontmostApp() end },
+}
+
+for _, slot in ipairs(voyagerDial) do
+  hs.hotkey.bind(hyper, slot.key, slot.fn)
+end
+
+hs.hotkey.bind(hyper, "h", function()
+  local lines = { "Voyager Speed Dial", "" }
+  for _, slot in ipairs(voyagerDial) do
+    table.insert(lines, string.format("%-2s  %s", string.upper(slot.key), slot.label))
+  end
+  table.insert(lines, "")
+  table.insert(lines, "H   Help")
+  hs.alert.show(table.concat(lines, "\n"), cheatsheetStyle, hs.screen.mainScreen(), 5)
+end)
+
 -- Global functions for CLI access (hs -c "...")
 function activateNamedLayout(name)
   orchestrator.activateNamedLayout(name)
@@ -209,8 +239,8 @@ function openIDE()
   orchestrator.ideForGhostty()
 end
 
-function centerGhosttyWindow(titlePrefix)
-  orchestrator.centerGhosttyWindow(titlePrefix)
+function showWorktree()
+  worktree.show()
 end
 
 hs.alert.show("Hammerspoon loaded")
