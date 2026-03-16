@@ -28,6 +28,57 @@ for i, name in ipairs(layouts.preferredApps or {}) do
 end
 local defaultPriority = #(layouts.preferredApps or {}) + 1
 
+-- Background cache for Ghostty terminal CWDs (avoids blocking windowFinder)
+local ghosttyCwdCache = {}
+local function refreshGhosttyCwds()
+  local home = os.getenv("HOME") or ""
+  local ok, result = hs.osascript.applescript([[
+    set output to ""
+    tell application "Ghostty"
+      repeat with w in (every window)
+        set t to focused terminal of selected tab of w
+        set tName to name of t
+        set tDir to working directory of t
+        set output to output & tName & "|" & tDir & linefeed
+      end repeat
+    end tell
+    return output
+  ]])
+  local cwds = {}
+  if ok and result then
+    for line in result:gmatch("[^\n]+") do
+      local name, cwd = line:match("^(.-)|(.*)")
+      if name and cwd and cwd ~= "" then
+        if home ~= "" and cwd:sub(1, #home) == home then
+          cwd = "~" .. cwd:sub(#home + 1)
+        end
+        cwds[name] = cwd
+      end
+    end
+  end
+  ghosttyCwdCache = cwds
+end
+
+-- Only run the timer when Ghostty is actually open
+local ghosttyCwdTimer = nil
+local ghosttyAppWatcher = hs.application.watcher.new(function(name, event, app)
+  if name ~= "Ghostty" then return end
+  if event == hs.application.watcher.launched then
+    refreshGhosttyCwds()
+    if not ghosttyCwdTimer then
+      ghosttyCwdTimer = hs.timer.doEvery(5, refreshGhosttyCwds)
+    end
+  elseif event == hs.application.watcher.terminated then
+    if ghosttyCwdTimer then ghosttyCwdTimer:stop(); ghosttyCwdTimer = nil end
+    ghosttyCwdCache = {}
+  end
+end)
+ghosttyAppWatcher:start()
+if hs.application.get("Ghostty") then
+  refreshGhosttyCwds()
+  ghosttyCwdTimer = hs.timer.doEvery(5, refreshGhosttyCwds)
+end
+
 -- Build repo color lookup from layouts config
 local repoPriority = {}
 local repoColorName = {}
@@ -958,41 +1009,32 @@ function M.minimizeAll()
 end
 
 function M.windowFinder()
-  -- Query Ghostty terminal CWDs via AppleScript (Ghostty 1.3+)
-  -- Works for normal shells; Claude Code terminals return empty CWD
-  local home = os.getenv("HOME") or ""
-  local ghosttyCwds = {} -- terminal name → cwd
-
-  local ok, result = hs.osascript.applescript([[
-    set output to ""
-    tell application "Ghostty"
-      repeat with w in (every window)
-        set t to focused terminal of selected tab of w
-        set tName to name of t
-        set tDir to working directory of t
-        set output to output & tName & "|" & tDir & linefeed
-      end repeat
-    end tell
-    return output
-  ]])
-  if ok and result then
-    for line in result:gmatch("[^\n]+") do
-      local name, cwd = line:match("^(.-)|(.*)")
-      if name and cwd and cwd ~= "" then
-        if home ~= "" and cwd:sub(1, #home) == home then
-          cwd = "~" .. cwd:sub(#home + 1)
-        end
-        ghosttyCwds[name] = cwd
-      end
-    end
-  end
-
+  local t0 = hs.timer.secondsSinceEpoch()
   local choices = {}
-  for _, app in ipairs(hs.application.runningApplications()) do
+  local iconCache = {}
+  local tApps = hs.timer.secondsSinceEpoch()
+  local apps = hs.application.runningApplications()
+  print(string.format("[finder] runningApplications: %.0fms", (hs.timer.secondsSinceEpoch() - tApps) * 1000))
+  for _, app in ipairs(apps) do
     local appName = app:name() or ""
     if hiddenSet[appName] or appName == "" then goto nextapp end
+    -- Skip background helper/agent processes (e.g. "Tuple Web Content") — they
+    -- hang on allWindows() for ~1.5s and never have useful windows.
+    if appName:match("Web Content$") or appName:match("Helper$") then goto nextapp end
 
-    for _, win in ipairs(app:allWindows()) do
+    local tApp = hs.timer.secondsSinceEpoch()
+    local bundleID = app:bundleID()
+    if bundleID and not iconCache[bundleID] then
+      iconCache[bundleID] = hs.image.imageFromAppBundle(bundleID)
+    end
+
+    local wins = app:allWindows()
+    local appMs = (hs.timer.secondsSinceEpoch() - tApp) * 1000
+    if appMs > 50 then
+      print(string.format("[finder]   slow app: %s %.0fms (%d wins)", appName, appMs, #wins))
+    end
+
+    for _, win in ipairs(wins) do
       local title = win:title() or ""
       if title == "" then goto nextwin end
 
@@ -1000,7 +1042,7 @@ function M.windowFinder()
       local state = win:isMinimized() and " [min]" or ""
 
       if appName == "Ghostty" then
-        local cwd = ghosttyCwds[title]
+        local cwd = ghosttyCwdCache[title]
         if cwd and cwd ~= "" then table.insert(subParts, cwd) end
       end
 
@@ -1009,13 +1051,15 @@ function M.windowFinder()
         subText = table.concat(subParts, "  ·  "),
         windowId = win:id(),
         appName = appName,
-        image = app and hs.image.imageFromAppBundle(app:bundleID()) or nil,
+        image = bundleID and iconCache[bundleID] or nil,
       })
 
       ::nextwin::
     end
     ::nextapp::
   end
+
+  print(string.format("[finder] window loop: %.0fms (%d choices)", (hs.timer.secondsSinceEpoch() - t0) * 1000, #choices))
 
   -- Sort: preferred apps first, then alphabetical
   table.sort(choices, function(a, b)
@@ -1037,6 +1081,7 @@ function M.windowFinder()
 
   chooser:placeholderText("Find window...")
   chooser:choices(choices)
+  print(string.format("[finder] total: %.0fms", (hs.timer.secondsSinceEpoch() - t0) * 1000))
   chooser:show()
 end
 

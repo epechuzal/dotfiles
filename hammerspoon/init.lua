@@ -370,6 +370,8 @@ end
 local helpDismissTimer = nil
 local helpShowTime = nil
 
+hs.hotkey.bind(hyper, "r", function() hs.reload() end)
+
 hs.hotkey.bind(hyper, "p", function()
   -- Show on press
   if not voyagerHelpCanvas then

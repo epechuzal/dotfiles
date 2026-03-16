@@ -83,7 +83,7 @@ if [ -f "$LOGIN_ITEMS_FILE" ]; then
     app=$(echo "$app" | sed 's/#.*//' | xargs)
     [ -z "$app" ] && continue
     if [ -d "/Applications/$app.app" ]; then
-      osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"/Applications/$app.app\", hidden:false}" 2>/dev/null || true
+      osascript -e "tell application \"System Events\" to make login item at end with properties {path:\"/Applications/$app.app\", hidden:false}" >/dev/null 2>&1 || true
     fi
   done < "$LOGIN_ITEMS_FILE"
 fi

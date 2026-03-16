@@ -188,7 +188,7 @@ fi
 if [ "$review_count" -gt 0 ]; then
   bar_text="👀 $review_count"
 else
-  bar_text="👀"
+  bar_text="✅"
 fi
 
 if $my_ci_failing; then

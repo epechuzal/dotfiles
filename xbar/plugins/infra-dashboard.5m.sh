@@ -121,8 +121,8 @@ if [ ${#github_actions_lines[@]} -gt 0 ]; then
         icon="❓"; color="gray"
       fi
 
-      created_epoch=$(TZ=UTC date -jf "%Y-%m-%dT%H:%M:%SZ" "$created" "+%s" 2>/dev/null)
-      updated_epoch=$(TZ=UTC date -jf "%Y-%m-%dT%H:%M:%SZ" "$updated" "+%s" 2>/dev/null)
+      created_epoch=$(date -ujf "%Y-%m-%dT%H:%M:%SZ" "$created" "+%s" 2>/dev/null)
+      updated_epoch=$(date -ujf "%Y-%m-%dT%H:%M:%SZ" "$updated" "+%s" 2>/dev/null)
 
       if [ "$status" != "completed" ]; then
         now_epoch=$(date "+%s")
@@ -138,7 +138,7 @@ if [ ${#github_actions_lines[@]} -gt 0 ]; then
           cancelled) status_label="Cancelled" ;;
           *)         status_label="Ran" ;;
         esac
-        end_time=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$updated" "+%b %d %H:%M" 2>/dev/null || echo "$updated")
+        end_time=$([ -n "$updated_epoch" ] && date -jf "%s" "$updated_epoch" "+%b %d %H:%M" 2>/dev/null || echo "$updated")
         if [ -n "$created_epoch" ] && [ -n "$updated_epoch" ] && [ "$updated_epoch" -gt "$created_epoch" ]; then
           time_line="$status_label after $(fmt_duration $((updated_epoch - created_epoch))) · $end_time"
         else
