@@ -7,8 +7,10 @@ set -e
 
 # Ensure node/npm are on PATH (nvm lazy-loading doesn't work in non-interactive scripts)
 if [ -d "$HOME/.nvm/versions/node" ]; then
-  NODE_DIR=$(ls -d "$HOME/.nvm/versions/node"/v* 2>/dev/null | sort -V | tail -1)
+  NODE_DIR=$(/bin/ls -d "$HOME/.nvm/versions/node"/v* 2>/dev/null | sort -V | tail -1)
   [ -n "$NODE_DIR" ] && export PATH="$NODE_DIR/bin:$PATH"
+  # Stable symlink for hooks and other non-shell contexts
+  [ -n "$NODE_DIR" ] && ln -sf "$NODE_DIR/bin/node" "$HOME/.claude/node"
 fi
 export PATH="/opt/homebrew/bin:$PATH"
 

@@ -396,6 +396,16 @@ end, function()
   end
 end)
 
+-- Load local overrides (machine-specific keybindings, not committed)
+local localConfig = hs.configdir .. "/local.lua"
+if hs.fs.attributes(localConfig) then
+  local ok, err = pcall(dofile, localConfig)
+  if not ok then
+    clog("local.lua error: " .. tostring(err))
+    hs.alert.show("local.lua error — check crash.log")
+  end
+end
+
 -- Global functions for CLI access (hs -c "...")
 function activateNamedLayout(name)
   orchestrator.activateNamedLayout(name)

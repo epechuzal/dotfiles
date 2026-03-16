@@ -219,7 +219,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME/.claude/hooks/set-terminal-title.js\""
+            "command": "exec \"$HOME/.claude/node\" \"$HOME/.claude/hooks/set-terminal-title.js\""
           }
         ]
       }
