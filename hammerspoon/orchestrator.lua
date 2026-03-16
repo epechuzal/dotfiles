@@ -957,4 +957,87 @@ function M.minimizeAll()
   log("minimize-all:" .. count)
 end
 
+function M.windowFinder()
+  -- Query Ghostty terminal CWDs via AppleScript (Ghostty 1.3+)
+  -- Works for normal shells; Claude Code terminals return empty CWD
+  local home = os.getenv("HOME") or ""
+  local ghosttyCwds = {} -- terminal name → cwd
+
+  local ok, result = hs.osascript.applescript([[
+    set output to ""
+    tell application "Ghostty"
+      repeat with w in (every window)
+        set t to focused terminal of selected tab of w
+        set tName to name of t
+        set tDir to working directory of t
+        set output to output & tName & "|" & tDir & linefeed
+      end repeat
+    end tell
+    return output
+  ]])
+  if ok and result then
+    for line in result:gmatch("[^\n]+") do
+      local name, cwd = line:match("^(.-)|(.*)")
+      if name and cwd and cwd ~= "" then
+        if home ~= "" and cwd:sub(1, #home) == home then
+          cwd = "~" .. cwd:sub(#home + 1)
+        end
+        ghosttyCwds[name] = cwd
+      end
+    end
+  end
+
+  local choices = {}
+  for _, app in ipairs(hs.application.runningApplications()) do
+    local appName = app:name() or ""
+    if hiddenSet[appName] or appName == "" then goto nextapp end
+
+    for _, win in ipairs(app:allWindows()) do
+      local title = win:title() or ""
+      if title == "" then goto nextwin end
+
+      local subParts = { appName }
+      local state = win:isMinimized() and " [min]" or ""
+
+      if appName == "Ghostty" then
+        local cwd = ghosttyCwds[title]
+        if cwd and cwd ~= "" then table.insert(subParts, cwd) end
+      end
+
+      table.insert(choices, {
+        text = title .. state,
+        subText = table.concat(subParts, "  ·  "),
+        windowId = win:id(),
+        appName = appName,
+        image = app and hs.image.imageFromAppBundle(app:bundleID()) or nil,
+      })
+
+      ::nextwin::
+    end
+    ::nextapp::
+  end
+
+  -- Sort: preferred apps first, then alphabetical
+  table.sort(choices, function(a, b)
+    local pa = priorityMap[a.appName] or defaultPriority
+    local pb = priorityMap[b.appName] or defaultPriority
+    if pa ~= pb then return pa < pb end
+    return a.text < b.text
+  end)
+
+  local chooser = hs.chooser.new(function(choice)
+    if not choice then return end
+    local win = utils.windowById(choice.windowId)
+    if win then
+      if win:isMinimized() then win:unminimize() end
+      win:focus()
+      log("finder:" .. (choice.text or "?"))
+    end
+  end)
+
+  chooser:placeholderText("Find window...")
+  chooser:choices(choices)
+  chooser:show()
+end
+
 return M

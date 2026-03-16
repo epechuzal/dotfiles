@@ -195,29 +195,203 @@ end
 local hyper = {"ctrl", "cmd", "alt", "shift"}
 
 local voyagerDial = {
-  { key = "w", label = "Worktree", fn = function() worktree.show() end },
-  { key = "g", label = "Ghostty", fn = function() orchestrator.ghosttyExpose() end },
-  { key = "t", label = "Terminal", fn = function() orchestrator.scratchTerminal() end },
-  { key = "b", label = "Browser", fn = function() hs.application.launchOrFocus("Zen") end },
-  { key = "v", label = "Vault", fn = function() orchestrator.activateNamedLayout("tacitus") end },
-  { key = "n", label = "Templates", fn = function() orchestrator.showTemplateChooser() end },
-  { key = "m", label = "Minimize", fn = function() orchestrator.minimizeAll() end },
-  { key = "x", label = "60/40", fn = function() orchestrator.quickSplit() end },
-  { key = "c", label = "Tile", fn = function() orchestrator.tileFrontmostApp() end },
+  {
+    name = "Terminals",
+    color = {0.3, 0.6, 1.0},
+    cols = 3, x = 0, y = 0,
+    keys = {
+      { key = "a", label = "Scratch",   fn = function() orchestrator.scratchTerminal() end },
+      { key = "s", label = "Worktree",  fn = function() worktree.show() end },
+      { key = "d", label = "Exposé",    fn = function() orchestrator.ghosttyExpose() end },
+    },
+  },
+  {
+    name = "Apps",
+    color = {0.8, 0.5, 1.0},
+    cols = 2, x = 0, y = 1,
+    keys = {
+      { key = "z", label = "Vault",    fn = function() orchestrator.activateNamedLayout("tacitus") end },
+      { key = "x", label = "Browser",  fn = function() hs.application.launchOrFocus("Zen") end },
+    },
+  },
+  {
+    name = "Find",
+    color = {1.0, 0.8, 0.2},
+    cols = 1, x = 3, y = 0,
+    keys = {
+      { key = "f", label = "Finder", fn = function() orchestrator.windowFinder() end },
+    },
+  },
+  {
+    name = "Arrange",
+    color = {0.3, 0.8, 0.4},
+    cols = 2, x = 4, y = 0,
+    keys = {
+      { key = "h", label = "Templates", fn = function() orchestrator.showTemplateChooser() end },
+      { key = "j", label = "Minimize",  fn = function() orchestrator.minimizeAll() end },
+      { key = "n", label = "60/40",     fn = function() orchestrator.quickSplit() end },
+      { key = "m", label = "Tile",      fn = function() orchestrator.tileFrontmostApp() end },
+    },
+  },
 }
 
-for _, slot in ipairs(voyagerDial) do
-  hs.hotkey.bind(hyper, slot.key, slot.fn)
+for _, block in ipairs(voyagerDial) do
+  for _, slot in ipairs(block.keys) do
+    if slot.fn then
+      hs.hotkey.bind(hyper, slot.key, slot.fn)
+    end
+  end
 end
 
-hs.hotkey.bind(hyper, "h", function()
-  local lines = { "Voyager Speed Dial", "" }
-  for _, slot in ipairs(voyagerDial) do
-    table.insert(lines, string.format("%-2s  %s", string.upper(slot.key), slot.label))
+local voyagerHelpCanvas = nil
+
+local function showVoyagerHelp()
+  if voyagerHelpCanvas then
+    voyagerHelpCanvas:delete()
+    voyagerHelpCanvas = nil
+    return
   end
-  table.insert(lines, "")
-  table.insert(lines, "H   Help")
-  hs.alert.show(table.concat(lines, "\n"), cheatsheetStyle, hs.screen.mainScreen(), 5)
+
+  local cellW, cellH = 110, 40
+  local gap = 8
+  local blockGap = 40
+  local headerH = 22
+  local padding = 30
+
+  -- Calculate bounding box
+  local maxX, maxY = 0, 0
+  for _, block in ipairs(voyagerDial) do
+    local rows = math.ceil(#block.keys / block.cols)
+    local bx = block.x * (cellW + blockGap) + block.cols * (cellW + gap)
+    local by = block.y * (cellH + blockGap) + headerH + rows * (cellH + gap)
+    if bx > maxX then maxX = bx end
+    if by > maxY then maxY = by end
+  end
+
+  local canvasW = maxX + padding * 2
+  local canvasH = maxY + padding * 2
+  local screen = hs.screen.mainScreen():frame()
+  local cx = screen.x + (screen.w - canvasW) / 2
+  local cy = screen.y + (screen.h - canvasH) / 2
+
+  local canvas = hs.canvas.new({ x = cx, y = cy, w = canvasW, h = canvasH })
+  canvas:level(hs.canvas.windowLevels.overlay)
+
+  -- Backdrop
+  canvas:appendElements({
+    type = "rectangle",
+    frame = { x = 0, y = 0, w = canvasW, h = canvasH },
+    fillColor = { white = 0, alpha = 0.88 },
+    strokeWidth = 0,
+    roundedRectRadii = { xRadius = 12, yRadius = 12 },
+  })
+
+  for _, block in ipairs(voyagerDial) do
+    local bx = padding + block.x * (cellW + blockGap)
+    local by = padding + block.y * (cellH + blockGap)
+    local rows = math.ceil(#block.keys / block.cols)
+    local bw = block.cols * cellW + (block.cols - 1) * gap
+    local bh = headerH + rows * cellH + (rows - 1) * gap
+    local rgb = block.color or {0.5, 0.5, 0.5}
+
+    -- Block border
+    canvas:appendElements({
+      type = "rectangle",
+      frame = { x = bx - 4, y = by - 4, w = bw + 8, h = bh + 8 },
+      fillColor = { red = rgb[1], green = rgb[2], blue = rgb[3], alpha = 0.08 },
+      strokeColor = { red = rgb[1], green = rgb[2], blue = rgb[3], alpha = 0.3 },
+      strokeWidth = 1,
+      roundedRectRadii = { xRadius = 8, yRadius = 8 },
+    })
+
+    -- Block header
+    canvas:appendElements({
+      type = "text",
+      frame = { x = bx, y = by, w = bw, h = headerH },
+      text = hs.styledtext.new(block.name, {
+        font = { name = ".AppleSystemUIFont", size = 11 },
+        color = { red = rgb[1], green = rgb[2], blue = rgb[3], alpha = 0.7 },
+      }),
+    })
+
+    -- Keys
+    for i, slot in ipairs(block.keys) do
+      local col = (i - 1) % block.cols
+      local row = math.floor((i - 1) / block.cols)
+      local kx = bx + col * (cellW + gap)
+      local ky = by + headerH + row * (cellH + gap)
+
+      -- Key background
+      canvas:appendElements({
+        type = "rectangle",
+        frame = { x = kx, y = ky, w = cellW, h = cellH },
+        fillColor = { red = rgb[1] * 0.25, green = rgb[2] * 0.25, blue = rgb[3] * 0.25, alpha = 1 },
+        strokeColor = { red = rgb[1], green = rgb[2], blue = rgb[3], alpha = 0.5 },
+        strokeWidth = 1,
+        roundedRectRadii = { xRadius = 6, yRadius = 6 },
+      })
+
+      -- Key label
+      canvas:appendElements({
+        type = "text",
+        frame = { x = kx, y = ky + 2, w = cellW, h = cellH - 4 },
+        text = hs.styledtext.new(slot.label, {
+          font = { name = ".AppleSystemUIFontMonospaced-Regular", size = 14 },
+          color = { white = 1, alpha = 0.9 },
+          paragraphStyle = { alignment = "center" },
+        }),
+      })
+
+      -- Key hint (small, bottom-right)
+      canvas:appendElements({
+        type = "text",
+        frame = { x = kx, y = ky + cellH - 16, w = cellW - 5, h = 14 },
+        text = hs.styledtext.new(string.upper(slot.key), {
+          font = { name = ".AppleSystemUIFont", size = 9 },
+          color = { white = 1, alpha = 0.25 },
+          paragraphStyle = { alignment = "right" },
+        }),
+      })
+    end
+  end
+
+  canvas:show()
+  voyagerHelpCanvas = canvas
+
+  -- Safety fallback: dismiss after 15s in case release event is missed
+  helpDismissTimer = hs.timer.doAfter(15, function()
+    if voyagerHelpCanvas then
+      voyagerHelpCanvas:delete()
+      voyagerHelpCanvas = nil
+    end
+  end)
+end
+
+local helpDismissTimer = nil
+local helpShowTime = nil
+
+hs.hotkey.bind(hyper, "p", function()
+  -- Show on press
+  if not voyagerHelpCanvas then
+    showVoyagerHelp()
+    helpShowTime = hs.timer.secondsSinceEpoch()
+  end
+  if helpDismissTimer then helpDismissTimer:stop(); helpDismissTimer = nil end
+end, function()
+  -- Dismiss on release, but enforce 2s minimum
+  local elapsed = helpShowTime and (hs.timer.secondsSinceEpoch() - helpShowTime) or 10
+  local function dismiss()
+    if voyagerHelpCanvas then
+      voyagerHelpCanvas:delete()
+      voyagerHelpCanvas = nil
+    end
+    if helpDismissTimer then helpDismissTimer:stop(); helpDismissTimer = nil end
+  end
+  if elapsed >= 2 then
+    dismiss()
+  else
+    helpDismissTimer = hs.timer.doAfter(2 - elapsed, dismiss)
+  end
 end)
 
 -- Global functions for CLI access (hs -c "...")
