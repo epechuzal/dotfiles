@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Sets terminal title based on user prompt for Hammerspoon window detection
-// Title format: repo: branch - <summary of what user asked>
-// < 50 chars: verbatim, < 200 chars: truncate, else: ask Haiku
+// Sets terminal title on each user prompt for Hammerspoon window detection.
+// Title format: repo: branch - <summary>
+// Self-contained — no dependency on GSD or any other statusline.
+// < 50 chars: verbatim, < 200 chars: truncate, >= 200: Haiku summary
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const { execSync } = require('child_process');
 
 let input = '';
@@ -17,20 +17,29 @@ process.stdin.on('end', () => {
   try {
     const data = JSON.parse(input);
     const prompt = data.prompt || '';
-    const sessionId = data.session_id || '';
-    if (!prompt || !sessionId) process.exit(0);
+    const cwd = data.cwd || process.cwd();
+    if (!prompt) process.exit(0);
 
-    // Clean up the prompt: collapse whitespace, strip leading slashes
     const clean = prompt.replace(/\s+/g, ' ').trim();
     if (!clean) process.exit(0);
 
+    // Get repo name and branch
+    let repo, branch;
+    try {
+      repo = path.basename(execSync('git -C ' + JSON.stringify(cwd) + ' rev-parse --show-toplevel 2>/dev/null', { encoding: 'utf8' }).trim());
+      branch = execSync('git -C ' + JSON.stringify(cwd) + ' symbolic-ref --short HEAD 2>/dev/null', { encoding: 'utf8' }).trim();
+    } catch (e) {
+      repo = path.basename(cwd);
+      branch = '';
+    }
+
+    // Summarize prompt
     let summary;
     if (clean.length < 50) {
       summary = clean;
     } else if (clean.length < 200) {
       summary = clean.slice(0, 47) + '...';
     } else {
-      // Ask Haiku for a 5-8 word summary
       try {
         const escaped = clean.slice(0, 500).replace(/'/g, "'\\''");
         summary = execSync(
@@ -45,10 +54,10 @@ process.stdin.on('end', () => {
       }
     }
 
-    // Write summary to temp file for statusline to pick up
-    const summaryPath = path.join(os.tmpdir(), `claude-title-${sessionId}.txt`);
-    fs.writeFileSync(summaryPath, summary);
-
+    // Set terminal title via OSC escape
+    const prefix = branch ? `${repo}: ${branch}` : repo;
+    const title = `${prefix} - ${summary}`;
+    fs.writeFileSync('/dev/tty', `\x1b]0;${title}\x07`);
   } catch (e) {
     // Silent fail
   }

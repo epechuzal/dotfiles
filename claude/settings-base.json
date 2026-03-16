@@ -212,5 +212,17 @@
       "Bash(git clean -fd *)",
       "Bash(git branch -D *)"
     ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/hooks/set-terminal-title.js\""
+          }
+        ]
+      }
+    ]
   }
 }
