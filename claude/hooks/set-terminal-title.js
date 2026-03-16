@@ -2,7 +2,7 @@
 // Sets terminal title on each user prompt for Hammerspoon window detection.
 // Title format: repo: branch - <summary>
 // Self-contained — no dependency on GSD or any other statusline.
-// < 50 chars: verbatim, < 200 chars: truncate, >= 200: Haiku summary
+// < 50 chars: verbatim, >= 50 chars: truncate
 
 const fs = require('fs');
 const path = require('path');
@@ -33,26 +33,8 @@ process.stdin.on('end', () => {
       branch = '';
     }
 
-    // Summarize prompt
-    let summary;
-    if (clean.length < 50) {
-      summary = clean;
-    } else if (clean.length < 200) {
-      summary = clean.slice(0, 47) + '...';
-    } else {
-      try {
-        const escaped = clean.slice(0, 500).replace(/'/g, "'\\''");
-        summary = execSync(
-          `echo '${escaped}' | claude -p --model haiku "Summarize this user request in 5-8 lowercase words. Output ONLY the summary, nothing else."`,
-          { encoding: 'utf8', timeout: 5000 }
-        ).trim();
-        if (!summary || summary.length > 60) {
-          summary = clean.slice(0, 47) + '...';
-        }
-      } catch (e) {
-        summary = clean.slice(0, 47) + '...';
-      }
-    }
+    // Summarize prompt (truncate only — no API calls)
+    const summary = clean.length <= 50 ? clean : clean.slice(0, 47) + '...';
 
     // Set terminal title via OSC escape
     const prefix = branch ? `${repo}: ${branch}` : repo;
