@@ -2,6 +2,9 @@
   "outputStyle": "Concise",
   "alwaysThinkingEnabled": true,
   "skipDangerousModePermissionPrompt": true,
+  "env": {
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  },
   "permissions": {
     "allow": [
       "Read(*)",

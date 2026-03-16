@@ -30,6 +30,10 @@ link "$TOPIC_DIR/config/profile"    "$CLAUDE_DIR/profile"
 link "$TOPIC_DIR/config/README.md"  "$CLAUDE_DIR/README.md"
 link "$TOPIC_DIR/skills/bugfix/SKILL.md" "$CLAUDE_DIR/skills/bugfix/SKILL.md"
 
+# Custom hooks
+mkdir -p "$CLAUDE_DIR/hooks"
+link "$TOPIC_DIR/hooks/set-terminal-title.js" "$CLAUDE_DIR/hooks/set-terminal-title.js"
+
 # Ensure base settings exist without clobbering tool-managed keys
 node "$TOPIC_DIR/ensure-settings.js"
 echo "  settings synced"
