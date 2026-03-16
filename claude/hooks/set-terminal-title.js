@@ -8,15 +8,29 @@
 //
 // Guards:
 //   - CLAUDE_TITLE_HOOK_ACTIVE env var prevents recursive hook execution
-//   - Cooldown (default 30 min) limits Haiku calls
-//   - State keyed by session_id (no per-tty hacks)
+//   - Minimum 3 prompts before first Haiku call (skip one-shots)
+//   - Cooldown (30 min) between subsequent Haiku calls
+//   - Skip refresh if no new prompts since last summary
+//   - State keyed by session_id
 
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
 const COOLDOWN_MS = 30 * 60 * 1000;
+const MIN_PROMPTS = 3;
 const STATE_DIR = path.join(require('os').tmpdir(), 'claude-title-hook');
+// Resolve claude CLI — check common locations
+const CLAUDE_CLI = (() => {
+  for (const p of [
+    path.join(require('os').homedir(), '.local/bin/claude'),
+    '/opt/homebrew/bin/claude',
+    '/usr/local/bin/claude',
+  ]) {
+    try { fs.accessSync(p, fs.constants.X_OK); return p; } catch (e) {}
+  }
+  return 'claude'; // hope it's on PATH
+})();
 
 // Recursion guard — claude -p triggers UserPromptSubmit too
 if (process.env.CLAUDE_TITLE_HOOK_ACTIVE) process.exit(0);
@@ -38,11 +52,12 @@ process.stdin.on('end', () => {
     const clean = prompt.replace(/\s+/g, ' ').trim();
     if (!clean) process.exit(0);
 
-    // Get repo name and branch
+    // Get repo name (from remote origin, not dir name — works for worktrees)
     let repo, branch;
     try {
-      repo = path.basename(execSync('git -C ' + JSON.stringify(cwd) + ' rev-parse --show-toplevel 2>/dev/null', { encoding: 'utf8' }).trim());
       branch = execSync('git -C ' + JSON.stringify(cwd) + ' symbolic-ref --short HEAD 2>/dev/null', { encoding: 'utf8' }).trim();
+      const remoteUrl = execSync('git -C ' + JSON.stringify(cwd) + ' remote get-url origin 2>/dev/null', { encoding: 'utf8' }).trim();
+      repo = path.basename(remoteUrl, '.git');
     } catch (e) {
       repo = path.basename(cwd);
       branch = '';
@@ -51,25 +66,34 @@ process.stdin.on('end', () => {
     // Load cooldown state (keyed by session)
     fs.mkdirSync(STATE_DIR, { recursive: true });
     const stateFile = sessionId ? path.join(STATE_DIR, `${sessionId}.json`) : '';
-    let state = { lastSummary: '', lastSummaryTime: 0 };
+    let state = { lastSummary: '', lastSummaryTime: 0, lastPromptCount: 0 };
     if (stateFile) {
       try { state = JSON.parse(fs.readFileSync(stateFile, 'utf8')); } catch (e) {}
     }
 
     const now = Date.now();
-    const cooldownElapsed = now - state.lastSummaryTime >= COOLDOWN_MS;
     let summary = state.lastSummary;
 
-    if (cooldownElapsed && transcriptPath) {
-      // Extract recent user prompts from CC's transcript JSONL
+    if (transcriptPath) {
       const prompts = extractUserPrompts(transcriptPath, 1500);
+      const promptCount = prompts.length;
+      const hasEnoughContext = promptCount >= MIN_PROMPTS;
+      const neverSummarized = state.lastSummaryTime === 0;
+      const cooldownElapsed = now - state.lastSummaryTime >= COOLDOWN_MS;
+      const hasNewPrompts = promptCount > state.lastPromptCount;
 
-      if (prompts.length > 0) {
+      // Fire Haiku when:
+      //   - enough context (>= 3 prompts) AND
+      //   - either never summarized, or (cooldown elapsed AND new prompts)
+      const shouldSummarize = hasEnoughContext
+        && (neverSummarized || (cooldownElapsed && hasNewPrompts));
+
+      if (shouldSummarize) {
         try {
           const context = prompts.join('\n---\n');
           const escaped = context.replace(/'/g, "'\\''");
           const result = execSync(
-            `echo '${escaped}' | CLAUDE_TITLE_HOOK_ACTIVE=1 claude -p --model haiku "These are the recent prompts from a coding session. Describe what this session is about in 4-8 lowercase words. Output ONLY the description, nothing else."`,
+            `echo '${escaped}' | CLAUDE_TITLE_HOOK_ACTIVE=1 ${CLAUDE_CLI} -p --model haiku "These are the recent prompts from a coding session. Describe what this session is about in 4-8 lowercase words. Output ONLY the description, nothing else."`,
             { encoding: 'utf8', timeout: 8000 }
           ).trim();
           if (result && result.length <= 60) {
@@ -81,6 +105,8 @@ process.stdin.on('end', () => {
           // Haiku failed — keep previous summary
         }
       }
+
+      state.lastPromptCount = promptCount;
     }
 
     // Save state
