@@ -16,8 +16,6 @@ brew "jq"
 brew "nvm"
 # Python package and project manager
 brew "uv"
-# Create, run, and share large language models (LLMs)
-brew "ollama", restart_service: :changed
 # Utility that provides fast incremental file transfer
 brew "rsync"
 # Sends magic packets to wake up network-devices
