@@ -86,6 +86,10 @@ M.repoColors = {
   { repo = "journal",  color = "green" },
 }
 
+-- Remote hosts whose worktrees appear in the chooser (configured per-machine in local.lua)
+-- Example: { { name = "dev", ssh = "dev" } }
+M.remoteHosts = {}
+
 -- Machine-specific overrides (not committed)
 -- Create ~/.hammerspoon/local.lua to add/override layouts, preferred/hidden apps
 -- Example:

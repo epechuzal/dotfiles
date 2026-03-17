@@ -11,6 +11,15 @@ for i, entry in ipairs(layouts.repoColors) do
 end
 local defaultPriority = #layouts.repoColors + 1
 
+local REMOTE_SCRIPT = "~/Workspace/dotfiles/hammerspoon/scripts/wt-git.sh"
+local TAILSCALE = "/usr/local/bin/tailscale"
+
+local function isHostReachable(host)
+  if not host.tailscaleIP then return true end
+  local _, status = hs.execute(TAILSCALE .. " status 2>/dev/null | grep " .. host.tailscaleIP .. " | grep -qv offline")
+  return status == true
+end
+
 local function runGit(...)
   local args = table.concat({...}, " ")
   local output, status = hs.execute(SCRIPT .. " " .. args)
@@ -27,6 +36,17 @@ local function runGit(...)
     hs.alert.show("Error: " .. result.error)
     return nil
   end
+  return result
+end
+
+local function runGitRemote(host, ...)
+  local args = table.concat({...}, " ")
+  local cmd = string.format("ssh -o ConnectTimeout=3 %s '%s %s'", host.ssh, REMOTE_SCRIPT, args)
+  local output, status = hs.execute(cmd)
+  if not status then return nil end
+  local ok, result = pcall(hs.json.decode, output)
+  if not ok then return nil end
+  if type(result) == "table" and result.error then return nil end
   return result
 end
 
@@ -54,91 +74,158 @@ local function repoColor(repoName)
   return layouts.colorPalette.gray
 end
 
--- Filled circle (existing repos/worktrees)
-local dotCache = {}
-local function colorDot(rgb, alpha)
+-- SF Symbol icon generation
+local SCRIPTS_DIR = os.getenv("HOME") .. "/Workspace/dotfiles/hammerspoon/scripts"
+local SF_ICON_BIN = SCRIPTS_DIR .. "/sf-icon"
+local SF_ICON_SRC = SCRIPTS_DIR .. "/sf-icon.swift"
+local ICON_CACHE_DIR = os.getenv("HOME") .. "/.hammerspoon/icon-cache"
+
+-- Compile sf-icon binary if needed
+local function ensureSfIconBin()
+  local f = io.open(SF_ICON_BIN, "r")
+  if f then f:close(); return true end
+  local _, ok = hs.execute("swiftc " .. SF_ICON_SRC .. " -framework AppKit -o " .. SF_ICON_BIN .. " 2>&1")
+  if not ok then
+    print("[worktree] Failed to compile sf-icon")
+    return false
+  end
+  return true
+end
+
+hs.execute("mkdir -p " .. ICON_CACHE_DIR)
+local sfIconReady = ensureSfIconBin()
+
+local iconCache = {}
+local function sfIcon(symbol, rgb, alpha)
   alpha = alpha or 1.0
-  local key = string.format("fill:%.2f,%.2f,%.2f,%.2f", rgb[1], rgb[2], rgb[3], alpha)
-  if dotCache[key] then return dotCache[key] end
-  local size = 24
-  local canvas = hs.canvas.new({x=0, y=0, w=size, h=size})
-  canvas[1] = {
-    type = "circle",
-    center = {x = size/2, y = size/2},
-    radius = size/2 - 2,
-    fillColor = {red=rgb[1], green=rgb[2], blue=rgb[3], alpha=alpha},
-    action = "fill",
-  }
-  local img = canvas:imageFromCanvas()
-  canvas:delete()
-  dotCache[key] = img
+  local key = string.format("%s:%.2f,%.2f,%.2f,%.2f", symbol, rgb[1], rgb[2], rgb[3], alpha)
+  if iconCache[key] then return iconCache[key] end
+
+  if not sfIconReady then return nil end
+
+  local path = string.format("%s/%s_%.0f_%.0f_%.0f_%.0f.png",
+    ICON_CACHE_DIR, symbol:gsub("%.", "_"), rgb[1]*255, rgb[2]*255, rgb[3]*255, alpha*100)
+
+  -- Generate if not on disk
+  local f = io.open(path, "r")
+  if f then
+    f:close()
+  else
+    local cmd = string.format("%s %s %.3f %.3f %.3f %.3f %s 48",
+      SF_ICON_BIN, symbol, rgb[1], rgb[2], rgb[3], alpha, path)
+    hs.execute(cmd)
+  end
+
+  local img = hs.image.imageFromPath(path)
+  if img then
+    img = img:setSize({w=24, h=24})
+    iconCache[key] = img
+  end
   return img
 end
 
--- Indented filled circle (worktree sub-entries)
-local function colorDotIndented(rgb, alpha)
-  alpha = alpha or 1.0
-  local key = string.format("ifill:%.2f,%.2f,%.2f,%.2f", rgb[1], rgb[2], rgb[3], alpha)
-  if dotCache[key] then return dotCache[key] end
-  local size = 24
-  local indent = 8
-  local dotSize = 14
-  local canvas = hs.canvas.new({x=0, y=0, w=size, h=size})
-  canvas[1] = {
-    type = "circle",
-    center = {x = indent + dotSize/2, y = size/2},
-    radius = dotSize/2 - 1,
-    fillColor = {red=rgb[1], green=rgb[2], blue=rgb[3], alpha=alpha},
-    action = "fill",
-  }
-  local img = canvas:imageFromCanvas()
-  canvas:delete()
-  dotCache[key] = img
-  return img
+-- Icon helpers: local repos = laptop, remote repos = cloud, actions = plus.circle
+local function localIcon(rgb, alpha)
+  return sfIcon("laptopcomputer", rgb, alpha)
 end
 
--- Ring/hollow circle (create/new actions)
-local function colorRing(rgb, alpha)
-  alpha = alpha or 1.0
-  local key = string.format("ring:%.2f,%.2f,%.2f,%.2f", rgb[1], rgb[2], rgb[3], alpha)
-  if dotCache[key] then return dotCache[key] end
-  local size = 24
-  local canvas = hs.canvas.new({x=0, y=0, w=size, h=size})
-  canvas[1] = {
-    type = "circle",
-    center = {x = size/2, y = size/2},
-    radius = size/2 - 2,
-    strokeColor = {red=rgb[1], green=rgb[2], blue=rgb[3], alpha=alpha},
-    strokeWidth = 2.5,
-    action = "stroke",
-  }
-  local img = canvas:imageFromCanvas()
-  canvas:delete()
-  dotCache[key] = img
-  return img
+local function localIconSub(rgb, alpha)
+  return sfIcon("arrow.turn.down.right", rgb, alpha or 0.75)
+end
+
+local function remoteIcon(rgb, alpha)
+  return sfIcon("cloud.fill", rgb, alpha)
+end
+
+local function remoteIconSub(rgb, alpha)
+  return sfIcon("cloud", rgb, alpha or 0.75)
+end
+
+local function actionIcon(rgb, alpha)
+  return sfIcon("plus.circle", rgb, alpha)
+end
+
+-- Wire up fn+delete (forward delete) on a chooser to trigger worktree deletion
+local function attachDeleteKey(chooser)
+  local tap
+  tap = hs.eventtap.new({hs.eventtap.event.types.keyDown}, function(event)
+    local keyCode = event:getKeyCode()
+    -- 51 = backspace, 117 = forward delete
+    if keyCode ~= 51 and keyCode ~= 117 then return false end
+    -- Only intercept when query is empty (otherwise user is editing search text)
+    if keyCode == 51 and (chooser:query() or "") ~= "" then return false end
+
+    local row = chooser:selectedRowContents()
+    print("[worktree-delete] key=" .. keyCode .. " row=" .. hs.inspect(row))
+    if not row or not row._name or row._name == "main" then return false end
+    if row._action ~= "open-worktree" and row._action ~= "open" then return false end
+
+    local repo = row._repo
+    local name = row._name
+    local remote = row._remote
+    print("[worktree-delete] deleting " .. repo .. "/" .. name .. (remote and " (remote:" .. remote.name .. ")" or ""))
+    chooser:cancel()
+    hs.timer.doAfter(0.1, function()
+      print("[worktree-delete] timer fired, calling cleanup")
+      M.cleanup(repo, name, remote)
+    end)
+    return true
+  end)
+
+  chooser:showCallback(function() tap:start() end)
+  chooser:hideCallback(function() tap:stop() end)
+  return chooser
 end
 
 -- Main entry point: flat repo list
 -- Enter = open main, worktree sub-entries for repos that have them
 function M.show()
   local repos = runGit("list-repos")
-  if not repos then return end
+  if not repos then repos = {} end
+
+  -- Tag local repos
+  for _, repo in ipairs(repos) do repo._remote = nil end
+
+  -- Fetch remote repos (skip unreachable hosts)
+  for _, host in ipairs(layouts.remoteHosts or {}) do
+    if isHostReachable(host) then
+      local remoteRepos = runGitRemote(host, "list-repos")
+      if remoteRepos then
+        for _, repo in ipairs(remoteRepos) do
+          repo._remote = host
+          table.insert(repos, repo)
+        end
+      end
+    end
+  end
 
   -- Priority repos in config order, then non-priority by most recent commit
+  -- Remote repos always sort after local repos of the same name
   table.sort(repos, function(a, b)
     local pa = repoPriority[a.name]
     local pb = repoPriority[b.name]
-    if pa and pb then return pa < pb end  -- both priority: config order
-    if pa and not pb then return true end  -- priority before non-priority
+    if pa and pb then
+      if pa ~= pb then return pa < pb end
+      -- Same priority slot: local before remote
+      if a._remote ~= b._remote then return not a._remote end
+    end
+    if pa and not pb then return true end
     if not pa and pb then return false end
-    return (a.lastCommit or "") > (b.lastCommit or "")  -- both non-priority: recency
+    -- Both non-priority: local first, then recency
+    if (not a._remote) ~= (not b._remote) then return not a._remote end
+    return (a.lastCommit or "") > (b.lastCommit or "")
   end)
 
   -- Gather worktrees for all repos that have them
   local repoWorktrees = {}
   for _, repo in ipairs(repos) do
     if repo.worktreeCount > 0 then
-      repoWorktrees[repo.name] = runGit("list-worktrees", repo.name) or {}
+      local wtKey = (repo._remote and repo._remote.name .. ":" or "") .. repo.name
+      if repo._remote then
+        repoWorktrees[wtKey] = runGitRemote(repo._remote, "list-worktrees", repo.name) or {}
+      else
+        repoWorktrees[wtKey] = runGit("list-worktrees", repo.name) or {}
+      end
     end
   end
 
@@ -146,18 +233,23 @@ function M.show()
   for _, repo in ipairs(repos) do
     local age = timeAgo(repo.lastCommit)
     local rgb = repoColor(repo.name)
+    local isRemote = repo._remote ~= nil
+    local hostLabel = isRemote and repo._remote.name or nil
+    local wtKey = (isRemote and repo._remote.name .. ":" or "") .. repo.name
 
     -- Main entry: selecting opens main directly
+    local nameDisplay = isRemote and (repo.name .. "  " .. hostLabel) or repo.name
     table.insert(choices, {
-      text = hs.styledtext.new(repo.name, {color = {red=rgb[1], green=rgb[2], blue=rgb[3], alpha = repoPriority[repo.name] and 1.0 or 0.3}}),
+      text = hs.styledtext.new(nameDisplay, {color = {red=rgb[1], green=rgb[2], blue=rgb[3], alpha = repoPriority[repo.name] and 1.0 or 0.3}}),
       subText = (repo.lastCommitMessage or "") .. "  ·  " .. age,
-      image = colorDot(rgb),
+      image = isRemote and remoteIcon(rgb) or localIcon(rgb),
       _action = "open-main",
       _repo = repo.name,
+      _remote = repo._remote,
     })
 
     -- Inline worktrees directly below their repo
-    local wts = repoWorktrees[repo.name]
+    local wts = repoWorktrees[wtKey]
     if wts then
       table.sort(wts, function(a, b)
         return (a.lastCommit or "") > (b.lastCommit or "")
@@ -168,12 +260,13 @@ function M.show()
         table.insert(choices, {
           text = hs.styledtext.new("   " .. wt.name, {color = {red=rgb[1], green=rgb[2], blue=rgb[3], alpha = wt.merged and 0.5 or 1.0}}),
           subText = "   " .. repo.name .. "  ·  " .. (wt.lastCommitMessage or "") .. "  ·  " .. wtAge .. mergedTag,
-          image = colorDotIndented(rgb, wt.merged and 0.4 or 0.75),
+          image = isRemote and remoteIconSub(rgb, wt.merged and 0.4 or 0.75) or localIconSub(rgb, wt.merged and 0.4 or 0.75),
           _action = "open-worktree",
           _repo = repo.name,
           _name = wt.name,
           _path = wt.path,
           _merged = wt.merged,
+          _remote = repo._remote,
         })
       end
     end
@@ -183,16 +276,24 @@ function M.show()
   table.insert(choices, {
     text = "New worktree...",
     subText = "Create a new worktree for any repo",
-    image = colorRing(layouts.colorPalette.gray),
+    image = actionIcon(layouts.colorPalette.gray),
     _action = "new-worktree",
   })
 
   local chooser = hs.chooser.new(function(choice)
     if not choice then return end
     if choice._action == "open-main" then
-      M._openWorktree(choice._repo, "main", false)
+      if choice._remote then
+        M._openRemote(choice._remote, choice._repo, "main")
+      else
+        M._openWorktree(choice._repo, "main", false)
+      end
     elseif choice._action == "open-worktree" then
-      M._openWorktree(choice._repo, choice._name, false)
+      if choice._remote then
+        M._openRemote(choice._remote, choice._repo, choice._name)
+      else
+        M._openWorktree(choice._repo, choice._name, false)
+      end
     elseif choice._action == "new-worktree" then
       hs.timer.doAfter(0.05, function()
         M._showNewWorktreeRepos(repos)
@@ -200,6 +301,7 @@ function M.show()
     end
   end)
 
+  attachDeleteKey(chooser)
   chooser:placeholderText("Open repository or manage worktrees...")
   chooser:choices(choices)
   chooser:show()
@@ -212,7 +314,7 @@ function M._showNewWorktreeRepos(repos)
     table.insert(choices, {
       text = repo.name,
       subText = "Create worktree in " .. repo.name,
-      image = colorRing(repoColor(repo.name)),
+      image = actionIcon(repoColor(repo.name)),
       _repo = repo.name,
     })
   end
@@ -253,7 +355,7 @@ function M._showWorktrees(repo)
         table.insert(choices, {
           text = "Create: " .. query,
           subText = "New worktree on branch claude/" .. query,
-          image = colorRing(rgb),
+          image = actionIcon(rgb),
           _repo = repo,
           _name = query,
           _action = "create",
@@ -265,7 +367,7 @@ function M._showWorktrees(repo)
     table.insert(choices, {
       text = "main",
       subText = "Open main repository",
-      image = colorDot(rgb),
+      image = localIcon(rgb),
       _repo = repo,
       _name = "main",
       _action = "open",
@@ -280,24 +382,13 @@ function M._showWorktrees(repo)
       table.insert(choices, {
         text = wt.name,
         subText = sub,
-        image = colorDot(rgb, wt.merged and 0.4 or 0.75),
+        image = localIconSub(rgb, wt.merged and 0.4 or 0.75),
         _repo = repo,
         _name = wt.name,
         _action = "open",
         _merged = wt.merged,
         _path = wt.path,
       })
-
-      if wt.merged then
-        table.insert(choices, {
-          text = "   Delete: " .. wt.name,
-          subText = "   Merged -- safe to remove",
-          image = colorDot({0.96, 0.26, 0.21}, 0.6),
-          _repo = repo,
-          _name = wt.name,
-          _action = "delete",
-        })
-      end
     end
 
     return choices
@@ -314,6 +405,7 @@ function M._showWorktrees(repo)
     end
   end)
 
+  attachDeleteKey(chooser)
   chooser:queryChangedCallback(function(query)
     chooser:choices(buildChoices(query))
   end)
@@ -387,29 +479,79 @@ function M._launchGhostty(dir, repo, name)
 end
 
 -- Cleanup worktree
-function M.cleanup(repo, name)
+function M.cleanup(repo, name, remote)
   if name == "main" then
     hs.alert.show("Cannot delete main")
     return
   end
 
-  local ok, result = hs.osascript.applescript(string.format([[
-    display dialog "Remove %s/%s and delete branch claude/%s?" buttons {"Cancel", "Delete"} default button "Cancel" with icon caution with title "Delete worktree?"
-  ]], repo, name, name))
-  if not ok or not result or not tostring(result):find("Delete") then return end
+  -- Gather rich info before confirming
+  local label = (remote and remote.name .. ":" or "") .. repo .. "/" .. name
+  print("[worktree-cleanup] getting info for " .. label)
+  local info
+  if remote then
+    info = runGitRemote(remote, "info", repo, name)
+  else
+    info = runGit("info", repo, name)
+  end
+  print("[worktree-cleanup] info result: " .. hs.inspect(info))
+  if not info then
+    hs.alert.show("Could not get worktree info")
+    return
+  end
 
-  M._closeGhosttyByCwd(repo, name)
+  -- Build summary lines
+  local lines = {}
+  table.insert(lines, label)
+  table.insert(lines, "Branch: " .. (info.branch or "unknown"))
+  table.insert(lines, "")
 
-  hs.alert.show("Removing " .. repo .. "/" .. name .. "...")
-  local task = hs.task.new(SCRIPT, function(exitCode, stdout, stderr)
-    if exitCode ~= 0 then
-      hs.alert.show("Failed to remove worktree")
-      print("wt-git.sh remove error: " .. (stderr or ""))
-      return
+  -- Status
+  if info.merged then
+    table.insert(lines, "✓ Merged into main")
+  elseif info.diffFiles == 0 then
+    table.insert(lines, "✓ No diff against main (likely squash-merged)")
+  else
+    table.insert(lines, "✗ NOT merged — " .. info.diffFiles .. " files differ from main")
+    table.insert(lines, "  " .. info.ahead .. " commits ahead, " .. info.behind .. " behind")
+  end
+
+  if info.dirty then
+    table.insert(lines, "⚠ Has uncommitted changes")
+  end
+
+  table.insert(lines, "")
+  table.insert(lines, "Last commit: " .. timeAgo(info.lastCommit))
+  table.insert(lines, info.lastCommitMessage or "")
+
+  local message = table.concat(lines, "\n")
+
+  local button = hs.dialog.blockAlert("Delete worktree?", message, "Delete", "Cancel")
+  if button ~= "Delete" then return end
+
+  if remote then
+    hs.alert.show("Removing " .. label .. "...")
+    local cmd = string.format("ssh -o ConnectTimeout=3 %s '%s remove %s %s'", remote.ssh, REMOTE_SCRIPT, repo, name)
+    local _, ok = hs.execute(cmd)
+    if ok then
+      hs.alert.show(label .. " removed")
+    else
+      hs.alert.show("Failed to remove remote worktree")
     end
-    hs.alert.show(repo .. "/" .. name .. " removed")
-  end, {"remove", repo, name})
-  task:start()
+  else
+    M._closeGhosttyByCwd(repo, name)
+
+    hs.alert.show("Removing " .. label .. "...")
+    local task = hs.task.new(SCRIPT, function(exitCode, stdout, stderr)
+      if exitCode ~= 0 then
+        hs.alert.show("Failed to remove worktree")
+        print("wt-git.sh remove error: " .. (stderr or ""))
+        return
+      end
+      hs.alert.show(label .. " removed")
+    end, {"remove", repo, name})
+    task:start()
+  end
 end
 
 function M._closeGhosttyByCwd(repo, name)
@@ -437,6 +579,45 @@ function M._closeGhosttyByCwd(repo, name)
   for _, pid in ipairs(shellPids) do
     hs.execute("kill " .. pid .. " 2>/dev/null")
   end
+end
+
+-- Open a remote repo/worktree via SSH in Ghostty
+function M._openRemote(host, repo, name)
+  local remoteDir
+  if name == "main" then
+    remoteDir = "~/Workspace/" .. repo
+  else
+    local worktrees = runGitRemote(host, "list-worktrees", repo) or {}
+    for _, wt in ipairs(worktrees) do
+      if wt.name == name then
+        remoteDir = wt.path
+        break
+      end
+    end
+    if not remoteDir then
+      hs.alert.show("Remote worktree not found: " .. name)
+      return
+    end
+  end
+
+  local sshCmd = string.format("ssh -t %s 'cd %s && exec zsh -l'", host.ssh, remoteDir)
+  local script = string.format([[
+    tell application "Ghostty"
+      activate
+      set cfg to new surface configuration
+      set command of cfg to "%s"
+      set win to new window with configuration cfg
+    end tell
+  ]], sshCmd)
+
+  local ok, result, descriptor = hs.osascript.applescript(script)
+  if not ok then
+    hs.alert.show("Failed to launch Ghostty")
+    print("AppleScript error: " .. tostring(descriptor))
+    return
+  end
+
+  hs.alert.show(host.name .. ":" .. repo .. "/" .. name .. " ready")
 end
 
 return M

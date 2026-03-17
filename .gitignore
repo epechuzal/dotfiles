@@ -18,3 +18,4 @@ xbar/infra-dashboard.local.conf
 # Work-specific config (stays local, not pushed to remote)
 str/
 .superpowers/
+hammerspoon/scripts/sf-icon

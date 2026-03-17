@@ -143,6 +143,89 @@ cmd_create() {
   echo "{\"path\": \"$(json_escape "$wt_dir")\", \"existed\": false}"
 }
 
+cmd_info() {
+  local repo="$1"
+  local name="$2"
+  local repo_dir="${WORKSPACE_DIR}/${repo}"
+
+  [ -d "$repo_dir/.git" ] || { echo '{"error":"Repository not found"}'; exit 1; }
+
+  cd "$repo_dir"
+  local main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+  local branch="claude/${name}"
+
+  # Find worktree path
+  local wt_path=""
+  local current_wt="" current_branch=""
+  while IFS= read -r line; do
+    case "$line" in
+      worktree\ *) current_wt="${line#worktree }" ;;
+      branch\ *)   current_branch="${line#branch refs/heads/}" ;;
+      "")
+        if [ "$(basename "$current_wt")" = "$name" ] && [ "$current_wt" != "$repo_dir" ]; then
+          wt_path="$current_wt"
+          branch="$current_branch"
+        fi
+        current_wt=""
+        current_branch=""
+        ;;
+    esac
+  done < <(git worktree list --porcelain)
+
+  [ -z "$wt_path" ] && { echo '{"error":"Worktree not found"}'; exit 1; }
+
+  # Merged check (traditional)
+  local merged="false"
+  if [ -n "$branch" ]; then
+    if git branch --merged "$main_branch" 2>/dev/null | grep -qw "$branch"; then
+      merged="true"
+    fi
+  fi
+
+  # Last commit info
+  local last_commit=$(git -C "$wt_path" log -1 --format='%aI' 2>/dev/null || echo "")
+  local last_msg=$(git -C "$wt_path" log -1 --format='%s' 2>/dev/null || echo "")
+  local last_author=$(git -C "$wt_path" log -1 --format='%an' 2>/dev/null || echo "")
+
+  # Commits ahead/behind main
+  local ahead=0 behind=0
+  if [ -n "$branch" ]; then
+    local counts=$(git rev-list --left-right --count "${main_branch}...${branch}" 2>/dev/null || echo "0 0")
+    behind=$(echo "$counts" | awk '{print $1}')
+    ahead=$(echo "$counts" | awk '{print $2}')
+  fi
+
+  # Uncommitted changes
+  local dirty="false"
+  if [ -d "$wt_path" ]; then
+    local wt_status=$(git -C "$wt_path" status --porcelain 2>/dev/null)
+    [ -n "$wt_status" ] && dirty="true"
+  fi
+
+  # Diff stat against main (shows if work is already in main via squash)
+  local diff_files=0
+  if [ -n "$branch" ]; then
+    diff_files=$(git diff --stat "${main_branch}...${branch}" 2>/dev/null | tail -1 | grep -oE '^[[:space:]]*[0-9]+' | tr -d ' ' || echo "0")
+    [ -z "$diff_files" ] && diff_files=0
+  fi
+
+  cat <<EOF
+{
+  "name": "$(json_escape "$name")",
+  "branch": "$(json_escape "$branch")",
+  "path": "$(json_escape "$wt_path")",
+  "merged": $merged,
+  "lastCommit": "$(json_escape "$last_commit")",
+  "lastCommitMessage": "$(json_escape "$last_msg")",
+  "lastAuthor": "$(json_escape "$last_author")",
+  "ahead": $ahead,
+  "behind": $behind,
+  "dirty": $dirty,
+  "diffFiles": $diff_files
+}
+EOF
+}
+
 cmd_remove() {
   local repo="$1"
   local name="$2"
@@ -170,6 +253,7 @@ cmd_remove() {
 case "${1:-}" in
   list-repos)     cmd_list_repos ;;
   list-worktrees) cmd_list_worktrees "$2" ;;
+  info)           cmd_info "$2" "$3" ;;
   create)         cmd_create "$2" "$3" ;;
   remove)         cmd_remove "$2" "$3" ;;
   *)
