@@ -12,6 +12,14 @@ if [ -d "$HOME/.nvm/versions/node" ]; then
   [ -n "$NODE_DIR" ] && export PATH="$NODE_DIR/bin:$PATH"
 fi
 
+# Remove nvm lazy-load shell functions that shadow PATH binaries
+# (this file is sourced in zsh despite the bash shebang, so whence works and is needed)
+for cmd in node npx npm; do
+  if whence -w "$cmd" 2>/dev/null | grep -q 'function'; then
+    unset -f "$cmd" 2>/dev/null
+  fi
+done
+
 # Environment variables from ~/.localrc
 [ -f ~/.localrc ] && source ~/.localrc
 
