@@ -115,4 +115,34 @@ function M.alert(msg, style, duration)
   return hs.alert.show(msg, style, M.mouseScreen(), duration)
 end
 
+-- SF Symbol icon generation (shared by worktree chooser and exposé)
+local SF_ICON_BIN = os.getenv("HOME") .. "/Workspace/dotfiles/hammerspoon/scripts/sf-icon"
+local ICON_CACHE_DIR = os.getenv("HOME") .. "/.hammerspoon/icon-cache"
+local sfIconCache = {}
+
+function M.sfIcon(symbol, rgb, alpha)
+  alpha = alpha or 1.0
+  local key = string.format("%s:%.2f,%.2f,%.2f,%.2f", symbol, rgb[1], rgb[2], rgb[3], alpha)
+  if sfIconCache[key] then return sfIconCache[key] end
+
+  local path = string.format("%s/%s_%.0f_%.0f_%.0f_%.0f.png",
+    ICON_CACHE_DIR, symbol:gsub("%.", "_"), rgb[1]*255, rgb[2]*255, rgb[3]*255, alpha*100)
+
+  local f = io.open(path, "r")
+  if f then
+    f:close()
+  else
+    hs.execute(string.format("mkdir -p %s", ICON_CACHE_DIR))
+    hs.execute(string.format("%s %s %.3f %.3f %.3f %.3f %s 48",
+      SF_ICON_BIN, symbol, rgb[1], rgb[2], rgb[3], alpha, path))
+  end
+
+  local img = hs.image.imageFromPath(path)
+  if img then
+    img = img:setSize({w=24, h=24})
+    sfIconCache[key] = img
+  end
+  return img
+end
+
 return M

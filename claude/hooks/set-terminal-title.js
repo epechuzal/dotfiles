@@ -120,8 +120,10 @@ process.stdin.on('end', () => {
     }
 
     // Set terminal title via OSC escape
+    // Prefix with hostname when running over SSH so Hammerspoon can identify remote sessions
     const prefix = branch ? `${repo}: ${branch}` : repo;
-    const title = `${prefix} - ${summary}`;
+    const sshPrefix = process.env.SSH_CONNECTION ? (require('os').hostname().split('.')[0] + ':') : '';
+    const title = `${sshPrefix}${prefix} - ${summary}`;
     fs.writeFileSync('/dev/tty', `\x1b]0;${title}\x07`);
   } catch (e) {
     // Silent fail

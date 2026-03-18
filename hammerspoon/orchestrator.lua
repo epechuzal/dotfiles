@@ -672,32 +672,75 @@ function M.ghosttyExpose()
   local baseX = (sf.w - totalW) / 2
   local baseY = (sf.h - totalH) / 2
 
-  -- Batch-gather cwd + foreground process for each Ghostty PID
-  -- Process tree: ghostty → login → zsh → foreground process
-  local procInfo = {} -- pid → { cwd = "...", proc = "..." }
+  -- Gather process info for each Ghostty login session
+  -- Process tree: ghostty → login(s) → shell or ssh
+  -- With shared-process Ghostty, one PID owns all windows, so we index by
+  -- login PID and later match windows via their title + login args.
+  local procByLogin = {} -- login_pid → { cwd, proc, ssh }
   local psOutput, _ = hs.execute(
-    "for pid in $(pgrep -x ghostty); do "
-    .. "login=$(pgrep -P $pid | head -1); "
-    .. "[ -z \"$login\" ] && continue; "
-    .. "shell=$(pgrep -P $login | head -1); "
-    .. "[ -z \"$shell\" ] && continue; "
-    .. "cwd=$(lsof -a -d cwd -Fn -p $shell 2>/dev/null | grep ^n | head -1 | cut -c2-); "
-    .. "fg=$(pgrep -P $shell | tail -1); "
+    "for pid in $(ps -eo pid,comm | awk '/\\/ghostty$/{print $1}'); do "
+    .. "for login in $(pgrep -P $pid); do "
+    .. "child=$(pgrep -P $login | head -1); "
+    .. "[ -z \"$child\" ] && continue; "
+    .. "cwd=$(lsof -a -d cwd -Fn -p $child 2>/dev/null | grep ^n | head -1 | cut -c2-); "
+    .. "fg=$(pgrep -P $child | tail -1); "
     .. "if [ -n \"$fg\" ]; then proc=$(ps -o comm= -p $fg 2>/dev/null); "
-    .. "else proc=$(ps -o comm= -p $shell 2>/dev/null); fi; "
-    .. "echo \"$pid|$cwd|$proc\"; "
-    .. "done"
+    .. "else proc=$(ps -o comm= -p $child 2>/dev/null); fi; "
+    .. "sshhost=''; "
+    .. "sshpid=''; "
+    .. "if ps -o comm= -p $child 2>/dev/null | grep -q ssh; then sshpid=$child; "
+    .. "elif [ -n \"$fg\" ] && ps -o comm= -p $fg 2>/dev/null | grep -q ssh; then sshpid=$fg; fi; "
+    .. "if [ -n \"$sshpid\" ]; then "
+    ..   "sshhost=$(ps -o args= -p $sshpid 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i !~ /^-/ && $i != \"ssh\" && $i !~ /^\\//) {print $i; exit}}'); "
+    .. "fi; "
+    .. "echo \"$login|$cwd|$proc|$sshhost\"; "
+    .. "done; done"
   )
   if psOutput then
     for line in psOutput:gmatch("[^\n]+") do
-      local pid, cwd, proc = line:match("^(%d+)|(.-)|(.*)")
-      if pid then
+      local lpid, cwd, proc, sshhost = line:match("^(%d+)|(.-)|(.-)|(.*)$")
+      if lpid then
         local home = os.getenv("HOME") or ""
         if cwd and home ~= "" and cwd:sub(1, #home) == home then
           cwd = "~" .. cwd:sub(#home + 1)
         end
-        procInfo[tonumber(pid)] = { cwd = cwd or "", proc = proc or "" }
+        procByLogin[tonumber(lpid)] = { cwd = cwd or "", proc = proc or "", ssh = sshhost or "" }
       end
+    end
+  end
+
+  -- Map Ghostty windows to their login sessions via window title matching.
+  -- For SSH windows the title won't match a repo, so we also check login args.
+  -- Fallback: index by app PID for single-process-per-window setups.
+  local procInfo = {} -- window_id → { cwd, proc, ssh }
+  for _, win in ipairs(ghosttyWindows) do
+    local wid = win:id()
+    local appPid = win:application() and win:application():pid() or 0
+    -- Try to match this window to a login session
+    for lpid, info in pairs(procByLogin) do
+      -- Check if this login's child cwd or ssh host relates to the window title
+      local title = win:title() or ""
+      local repo = title:match("^([^:]+):")
+      if repo then repo = repo:match("^%s*(.-)%s*$") end
+
+      if info.ssh ~= "" then
+        -- SSH session: match if window title doesn't match any known repo (it's the SSH window)
+        -- or if only one SSH session exists
+        local repoMatch = false
+        if repo then
+          local workspace = os.getenv("HOME") .. "/Workspace"
+          repoMatch = info.cwd:find(repo, 1, true) ~= nil
+        end
+        if not repoMatch and not procInfo[wid] then
+          procInfo[wid] = info
+        end
+      elseif repo and info.cwd:find(repo, 1, true) then
+        procInfo[wid] = info
+      end
+    end
+    -- Fallback: no match found
+    if not procInfo[wid] then
+      procInfo[wid] = procByLogin[appPid] or { cwd = "", proc = "", ssh = "" }
     end
   end
 
@@ -778,21 +821,43 @@ function M.ghosttyExpose()
     end
     elCount = elCount + 1
 
-    -- Colored dot
+    -- Indicator: cloud icon for SSH sessions (title starts with "host:"), colored dot for local
     local colorName = repoColorName[repo] or "gray"
     local rgb = (layouts.colorPalette or {})[colorName] or {0.38, 0.49, 0.55}
-    canvas:appendElements({
-      type = "circle",
-      center = { x = x + 18, y = y + thumbH + labelH / 2 },
-      radius = 6,
-      fillColor = { red = rgb[1], green = rgb[2], blue = rgb[3], alpha = 1 },
-      strokeWidth = 0,
-      action = "fill",
-    })
+    local info = procInfo[win:id()] or { cwd = "", proc = "", ssh = "" }
+    local isSSH = title:match("^[^:]+:[^:]+:") ~= nil or (info.ssh ~= "")
+
+    if isSSH then
+      local cloudImg = utils.sfIcon("cloud.fill", rgb)
+      if cloudImg then
+        canvas:appendElements({
+          type = "image",
+          frame = { x = x + 6, y = y + thumbH + labelH / 2 - 10, w = 20, h = 20 },
+          image = cloudImg,
+        })
+      else
+        canvas:appendElements({
+          type = "text",
+          frame = { x = x + 6, y = y + thumbH + labelH / 2 - 10, w = 20, h = 20 },
+          text = hs.styledtext.new("☁", {
+            font = { size = 16 },
+            color = { red = rgb[1], green = rgb[2], blue = rgb[3], alpha = 1 },
+          }),
+        })
+      end
+    else
+      canvas:appendElements({
+        type = "circle",
+        center = { x = x + 18, y = y + thumbH + labelH / 2 },
+        radius = 6,
+        fillColor = { red = rgb[1], green = rgb[2], blue = rgb[3], alpha = 1 },
+        strokeWidth = 0,
+        action = "fill",
+      })
+    end
     elCount = elCount + 1
 
     -- Label: title + cwd/process
-    local info = procInfo[win:application() and win:application():pid() or 0]
     local line2 = ""
     if info then
       local parts = {}
