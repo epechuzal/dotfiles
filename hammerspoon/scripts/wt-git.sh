@@ -236,8 +236,22 @@ cmd_remove() {
 
   cd "$repo_dir"
 
-  local wt_path=$(git worktree list --porcelain | grep -A2 "^worktree " | \
-    awk '/^worktree /{path=$2} /^branch refs\/heads\/claude\/'"${name}"'$/{print path}')
+  # Find worktree by directory name (basename), not branch name
+  local wt_path="" wt_branch=""
+  local current_wt="" current_branch=""
+  while IFS= read -r line; do
+    case "$line" in
+      worktree\ *) current_wt="${line#worktree }" ;;
+      branch\ *)   current_branch="${line#branch refs/heads/}" ;;
+      "")
+        if [ "$(basename "$current_wt")" = "$name" ] && [ "$current_wt" != "$repo_dir" ]; then
+          wt_path="$current_wt"
+          wt_branch="$current_branch"
+        fi
+        current_wt="" current_branch=""
+        ;;
+    esac
+  done < <(git worktree list --porcelain; echo "")
 
   if [ -z "$wt_path" ]; then
     echo '{"error":"Worktree not found"}'
@@ -245,7 +259,7 @@ cmd_remove() {
   fi
 
   git worktree remove "$wt_path" --force 2>/tmp/wt-git-error.log || true
-  git branch -D "claude/${name}" 2>/dev/null || true
+  [ -n "$wt_branch" ] && git branch -D "$wt_branch" 2>/dev/null || true
 
   echo '{"success": true}'
 }

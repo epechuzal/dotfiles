@@ -177,58 +177,22 @@ local function attachDeleteKey(chooser)
   return chooser
 end
 
--- Main entry point: flat repo list
--- Enter = open main, worktree sub-entries for repos that have them
-function M.show()
-  local repos = runGit("list-repos")
-  if not repos then repos = {} end
-
-  -- Tag local repos
-  for _, repo in ipairs(repos) do repo._remote = nil end
-
-  -- Fetch remote repos (skip unreachable hosts)
-  for _, host in ipairs(layouts.remoteHosts or {}) do
-    if isHostReachable(host) then
-      local remoteRepos = runGitRemote(host, "list-repos")
-      if remoteRepos then
-        for _, repo in ipairs(remoteRepos) do
-          repo._remote = host
-          table.insert(repos, repo)
-        end
-      end
-    end
-  end
-
-  -- Priority repos in config order, then non-priority by most recent commit
-  -- Remote repos always sort after local repos of the same name
+local function sortRepos(repos)
   table.sort(repos, function(a, b)
     local pa = repoPriority[a.name]
     local pb = repoPriority[b.name]
     if pa and pb then
       if pa ~= pb then return pa < pb end
-      -- Same priority slot: local before remote
       if a._remote ~= b._remote then return not a._remote end
     end
     if pa and not pb then return true end
     if not pa and pb then return false end
-    -- Both non-priority: local first, then recency
     if (not a._remote) ~= (not b._remote) then return not a._remote end
     return (a.lastCommit or "") > (b.lastCommit or "")
   end)
+end
 
-  -- Gather worktrees for all repos that have them
-  local repoWorktrees = {}
-  for _, repo in ipairs(repos) do
-    if repo.worktreeCount > 0 then
-      local wtKey = (repo._remote and repo._remote.name .. ":" or "") .. repo.name
-      if repo._remote then
-        repoWorktrees[wtKey] = runGitRemote(repo._remote, "list-worktrees", repo.name) or {}
-      else
-        repoWorktrees[wtKey] = runGit("list-worktrees", repo.name) or {}
-      end
-    end
-  end
-
+local function buildChoicesFromRepos(repos, repoWorktrees)
   local choices = {}
   for _, repo in ipairs(repos) do
     local age = timeAgo(repo.lastCommit)
@@ -237,7 +201,6 @@ function M.show()
     local hostLabel = isRemote and repo._remote.name or nil
     local wtKey = (isRemote and repo._remote.name .. ":" or "") .. repo.name
 
-    -- Main entry: selecting opens main directly
     local nameDisplay = isRemote and (repo.name .. "  " .. hostLabel) or repo.name
     table.insert(choices, {
       text = hs.styledtext.new(nameDisplay, {color = {red=rgb[1], green=rgb[2], blue=rgb[3], alpha = repoPriority[repo.name] and 1.0 or 0.3}}),
@@ -248,7 +211,6 @@ function M.show()
       _remote = repo._remote,
     })
 
-    -- Inline worktrees directly below their repo
     local wts = repoWorktrees[wtKey]
     if wts then
       table.sort(wts, function(a, b)
@@ -272,7 +234,6 @@ function M.show()
     end
   end
 
-  -- "New worktree..." at the bottom (always)
   table.insert(choices, {
     text = "New worktree...",
     subText = "Create a new worktree for any repo",
@@ -280,8 +241,68 @@ function M.show()
     _action = "new-worktree",
   })
 
-  local chooser = hs.chooser.new(function(choice)
-    if not choice then return end
+  return choices
+end
+
+local function choiceMatchesQuery(choice, query)
+  if not query or query == "" then return true end
+  query = query:lower()
+  local text = choice._repo or ""
+  local name = choice._name or ""
+  local action = choice._action or ""
+  if action == "new-worktree" then return true end
+  return text:lower():find(query, 1, true) or name:lower():find(query, 1, true)
+end
+
+-- Main entry point: flat repo list
+-- Enter = open main, worktree sub-entries for repos that have them
+function M.show()
+  local repos = runGit("list-repos")
+  if not repos then repos = {} end
+  for _, repo in ipairs(repos) do repo._remote = nil end
+
+  -- Gather local worktrees
+  local repoWorktrees = {}
+  for _, repo in ipairs(repos) do
+    if repo.worktreeCount > 0 then
+      repoWorktrees[repo.name] = runGit("list-worktrees", repo.name) or {}
+    end
+  end
+
+  sortRepos(repos)
+  local allRepos = {}
+  for _, r in ipairs(repos) do table.insert(allRepos, r) end
+
+  local chooser
+  local remoteLoading = false
+
+  local dismissed = false
+
+  local function refreshChoices()
+    if dismissed then return end
+    local query = chooser and chooser:query() or ""
+    local choices = buildChoicesFromRepos(allRepos, repoWorktrees)
+    if query ~= "" then
+      local filtered = {}
+      for _, c in ipairs(choices) do
+        if choiceMatchesQuery(c, query) then table.insert(filtered, c) end
+      end
+      choices = filtered
+    end
+    if remoteLoading then
+      table.insert(choices, 1, {
+        text = hs.styledtext.new("Loading remote worktrees...", {color = {red=0.5, green=0.5, blue=0.5, alpha=0.6}}),
+        subText = "",
+        image = sfIcon("arrow.triangle.2.circlepath", {0.5, 0.5, 0.5}, 0.5),
+        _action = "noop",
+      })
+    end
+    chooser:choices(choices)
+  end
+
+  chooser = hs.chooser.new(function(choice)
+    dismissed = true
+    if not choice or choice._action == "noop" then return end
     if choice._action == "open-main" then
       if choice._remote then
         M._openRemote(choice._remote, choice._repo, "main")
@@ -296,15 +317,81 @@ function M.show()
       end
     elseif choice._action == "new-worktree" then
       hs.timer.doAfter(0.05, function()
-        M._showNewWorktreeRepos(repos)
+        M._showNewWorktreeRepos(allRepos)
       end)
     end
   end)
 
   attachDeleteKey(chooser)
   chooser:placeholderText("Open repository or manage worktrees...")
-  chooser:choices(choices)
+  refreshChoices()
   chooser:show()
+
+  -- Async fetch remote repos
+  local remoteHosts = {}
+  for _, host in ipairs(layouts.remoteHosts or {}) do
+    if isHostReachable(host) then table.insert(remoteHosts, host) end
+  end
+
+  if #remoteHosts == 0 then return end
+
+  remoteLoading = true
+  refreshChoices()
+  local pendingTasks = 0
+  local function taskDone()
+    pendingTasks = pendingTasks - 1
+    if pendingTasks == 0 then remoteLoading = false end
+    refreshChoices()
+  end
+
+  local function fetchWorktreesAsync(host, reposWithWt)
+    for _, repo in ipairs(reposWithWt) do
+      pendingTasks = pendingTasks + 1
+      local wtCmd = string.format("ssh -o ConnectTimeout=3 %s '%s list-worktrees %s'", host.ssh, REMOTE_SCRIPT, repo.name)
+      hs.task.new("/bin/bash", function(wtExit, wtOut, _)
+        if wtExit == 0 then
+          local ok, wts = pcall(hs.json.decode, wtOut)
+          if ok and wts and type(wts) == "table" and not wts.error then
+            repoWorktrees[host.name .. ":" .. repo.name] = wts
+          end
+        end
+        taskDone()
+      end, {"-c", wtCmd}):start()
+    end
+  end
+
+  for _, host in ipairs(remoteHosts) do
+    pendingTasks = pendingTasks + 1
+    local cmd = string.format("ssh -o ConnectTimeout=3 %s '%s list-repos'", host.ssh, REMOTE_SCRIPT)
+    hs.task.new("/bin/bash", function(exitCode, stdout, _stderr)
+      if exitCode ~= 0 then
+        taskDone()
+        return
+      end
+
+      local ok, remoteRepos = pcall(hs.json.decode, stdout)
+      if not ok or not remoteRepos or remoteRepos.error then
+        taskDone()
+        return
+      end
+
+      -- Add repos to list and refresh immediately (shows repos before worktrees load)
+      local reposWithWt = {}
+      for _, repo in ipairs(remoteRepos) do
+        repo._remote = host
+        table.insert(allRepos, repo)
+        if repo.worktreeCount > 0 then table.insert(reposWithWt, repo) end
+      end
+      sortRepos(allRepos)
+
+      -- Fire off async worktree fetches
+      if #reposWithWt > 0 then
+        fetchWorktreesAsync(host, reposWithWt)
+      end
+
+      taskDone()
+    end, {"-c", cmd}):start()
+  end
 end
 
 -- Repo picker for "New worktree..." → then step 2
