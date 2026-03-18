@@ -12,6 +12,7 @@ local function clog(msg)
 end
 clog("=== Hammerspoon loaded ===")
 
+local utils = require("utils")
 local orchestrator = require("orchestrator")
 local layouts = require("layouts")
 local banish = require("banish")
@@ -62,7 +63,7 @@ local speedDial = {
     { key = "e", label = "Scratch", fn = function() orchestrator.scratchTerminal() end },
   },
   { -- Row 2: A S D
-    { key = "a", label = "Tacitus", fn = function() hs.alert.show("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
+    { key = "a", label = "Tacitus", fn = function() utils.alert("Layout: tacitus"); orchestrator.activateNamedLayout("tacitus") end },
     { key = "s", label = "Zen", fn = function() hs.application.launchOrFocus("Zen") end },
     { key = "d", label = "Exposé", fn = function() orchestrator.ghosttyExpose() end },
   },
@@ -89,7 +90,7 @@ function modal:entered()
   table.insert(lines, "")
   table.insert(lines, string.format("%-2s %-12s  %-2s %-12s", "M", "Minimize All", "R", "Reload"))
 
-  cheatsheet = hs.alert.show(table.concat(lines, "\n"), cheatsheetStyle, hs.screen.mainScreen(), "indefinite")
+  cheatsheet = utils.alert(table.concat(lines, "\n"), cheatsheetStyle, "indefinite")
 end
 
 function modal:exited()
@@ -402,7 +403,7 @@ if hs.fs.attributes(localConfig) then
   local ok, err = pcall(dofile, localConfig)
   if not ok then
     clog("local.lua error: " .. tostring(err))
-    hs.alert.show("local.lua error — check crash.log")
+    utils.alert("local.lua error — check crash.log")
   end
 end
 
@@ -418,7 +419,7 @@ function activateTemplate(name)
       return
     end
   end
-  hs.alert.show("Unknown template: " .. name)
+  utils.alert("Unknown template: " .. name)
 end
 
 function openIDE()
@@ -429,4 +430,4 @@ function showWorktree()
   worktree.show()
 end
 
-hs.alert.show("Hammerspoon loaded")
+utils.alert("Hammerspoon loaded")

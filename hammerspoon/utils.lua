@@ -96,4 +96,23 @@ function M.windowById(id)
   return hs.window.get(id)
 end
 
+-- Show a chooser on the screen where the mouse pointer is
+function M.showChooser(chooser)
+  local screen = hs.mouse.getCurrentScreen() or hs.screen.mainScreen()
+  local f = screen:fullFrame()
+  local widthPct = chooser:width() or 40
+  local chooserW = f.w * (widthPct / 100)
+  chooser:show(hs.geometry.point(f.x + (f.w - chooserW) / 2, f.y + (f.h * 0.2)))
+end
+
+-- Return the screen where the mouse pointer is
+function M.mouseScreen()
+  return hs.mouse.getCurrentScreen() or hs.screen.mainScreen()
+end
+
+-- hs.alert.show() that always targets the mouse screen
+function M.alert(msg, style, duration)
+  return hs.alert.show(msg, style, M.mouseScreen(), duration)
+end
+
 return M

@@ -102,7 +102,7 @@ end
 function M.activateNamedLayout(name)
   local layout = layouts.named[name]
   if not layout then
-    hs.alert.show("Unknown layout: " .. name)
+    utils.alert("Unknown layout: " .. name)
     return
   end
 
@@ -128,7 +128,7 @@ function M.activateNamedLayout(name)
           end
         end)
       else
-        hs.alert.show("No window found: " .. slot.app .. (slot.title and (" / " .. slot.title) or ""))
+        utils.alert("No window found: " .. slot.app .. (slot.title and (" / " .. slot.title) or ""))
       end
     else
       table.insert(pendingSlots, { slot = slot, screen = screen, matches = matches })
@@ -152,7 +152,7 @@ end
 
 local function pickGhosttyAndArrange(main, ghosttyWins)
   if #ghosttyWins == 0 then
-    hs.alert.show("No Ghostty window found")
+    utils.alert("No Ghostty window found")
     return
   end
   if #ghosttyWins == 1 then
@@ -171,13 +171,13 @@ local function pickGhosttyAndArrange(main, ghosttyWins)
   end)
   chooser:placeholderText("Pick Ghostty window for right side...")
   chooser:choices(choices)
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 function M.quickSplit()
   local front = hs.window.frontmostWindow()
   if not front then
-    hs.alert.show("No frontmost window")
+    utils.alert("No frontmost window")
     return
   end
 
@@ -196,7 +196,7 @@ function M.quickSplit()
       end
     end
     if not main then
-      hs.alert.show("No main app window found")
+      utils.alert("No main app window found")
       return
     end
     arrangeQuickSplit(main, front)
@@ -222,7 +222,7 @@ function M.quickSplit()
     elseif #allGhostty > 0 then
       pickGhosttyAndArrange(front, allGhostty)
     else
-      hs.alert.show("No Ghostty window found")
+      utils.alert("No Ghostty window found")
     end
 
   else
@@ -257,7 +257,7 @@ function M._resolveAmbiguous(pendingSlots, index)
 
   chooser:placeholderText("Pick window for: " .. slot.app .. (slot.title and (" / " .. slot.title) or ""))
   chooser:choices(choices)
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 function M.showTemplateChooser()
@@ -283,7 +283,7 @@ function M.showTemplateChooser()
 
   chooser:placeholderText("Choose a layout template...")
   chooser:choices(choices)
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 function M._fillTemplateSlots(template, assigned, slotIndex)
@@ -332,7 +332,7 @@ function M._fillTemplateSlots(template, assigned, slotIndex)
 
   chooser:placeholderText("Pick window for: " .. slot.label)
   chooser:choices(choices)
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 -- "Open IDE alongside Ghostty" flow:
@@ -356,7 +356,7 @@ function M.ideForGhostty()
   end
 
   if #ghosttyWindows == 0 then
-    hs.alert.show("No Ghostty windows found")
+    utils.alert("No Ghostty windows found")
     return
   end
 
@@ -382,7 +382,7 @@ function M.ideForGhostty()
 
     local dir = choice.repo and (projectsDir .. "/" .. choice.repo) or nil
     if not dir then
-      hs.alert.show("Couldn't parse working dir from: " .. (choice.text or ""))
+      utils.alert("Couldn't parse working dir from: " .. (choice.text or ""))
       return
     end
 
@@ -418,7 +418,7 @@ function M.ideForGhostty()
         if #allWs > 0 then
           arrange(allWs[1])
         else
-          hs.alert.show("WebStorm didn't open in time")
+          utils.alert("WebStorm didn't open in time")
         end
       end
     end)
@@ -426,7 +426,7 @@ function M.ideForGhostty()
 
   chooser:placeholderText("Open IDE for which project?")
   chooser:choices(choices)
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 local function appWindowsOnScreen(appName, screen)
@@ -448,7 +448,7 @@ end
 function M.tileFrontmostApp()
   local frontWin = hs.window.frontmostWindow()
   if not frontWin then
-    hs.alert.show("No frontmost window")
+    utils.alert("No frontmost window")
     return
   end
 
@@ -580,7 +580,7 @@ function M.ghosttyWindowSwitcher()
   local ghosttyWindows = utils.findWindows("Ghostty")
 
   if #ghosttyWindows == 0 then
-    hs.alert.show("No Ghostty windows found")
+    utils.alert("No Ghostty windows found")
     return
   end
 
@@ -622,7 +622,7 @@ function M.ghosttyWindowSwitcher()
 
   chooser:placeholderText("Switch to Ghostty window...")
   chooser:choices(choices)
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 -- Ghostty Exposé: fullscreen grid of window thumbnails
@@ -634,7 +634,7 @@ function M.ghosttyExpose()
 
   local ghosttyWindows = utils.findWindows("Ghostty")
   if #ghosttyWindows == 0 then
-    hs.alert.show("No Ghostty windows found")
+    utils.alert("No Ghostty windows found")
     return
   end
 
@@ -970,7 +970,7 @@ function M.scratchTerminal()
     if attempts > 25 then
       timer:stop()
       scratchLaunching = false
-      hs.alert.show("Scratch terminal didn't open in time")
+      utils.alert("Scratch terminal didn't open in time")
     end
   end)
 end
@@ -1004,7 +1004,7 @@ function M.minimizeAll()
     end
   end
 
-  hs.alert.show("Hidden " .. count .. " windows")
+  utils.alert("Hidden " .. count .. " windows")
   log("minimize-all:" .. count)
 end
 
@@ -1082,7 +1082,7 @@ function M.windowFinder()
   chooser:placeholderText("Find window...")
   chooser:choices(choices)
   print(string.format("[finder] total: %.0fms", (hs.timer.secondsSinceEpoch() - t0) * 1000))
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 return M

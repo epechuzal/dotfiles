@@ -1,4 +1,5 @@
 local layouts = require("layouts")
+local utils = require("utils")
 
 local M = {}
 
@@ -24,16 +25,16 @@ local function runGit(...)
   local args = table.concat({...}, " ")
   local output, status = hs.execute(SCRIPT .. " " .. args)
   if not status then
-    hs.alert.show("wt-git.sh failed")
+    utils.alert("wt-git.sh failed")
     return nil
   end
   local ok, result = pcall(hs.json.decode, output)
   if not ok then
-    hs.alert.show("Failed to parse wt-git.sh output")
+    utils.alert("Failed to parse wt-git.sh output")
     return nil
   end
   if type(result) == "table" and result.error then
-    hs.alert.show("Error: " .. result.error)
+    utils.alert("Error: " .. result.error)
     return nil
   end
   return result
@@ -325,7 +326,7 @@ function M.show()
   attachDeleteKey(chooser)
   chooser:placeholderText("Open repository or manage worktrees...")
   refreshChoices()
-  chooser:show()
+  utils.showChooser(chooser)
 
   -- Async fetch remote repos
   local remoteHosts = {}
@@ -415,7 +416,7 @@ function M._showNewWorktreeRepos(repos)
 
   chooser:placeholderText("Create worktree in which repo?")
   chooser:choices(choices)
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 -- Step 2: Worktree chooser (for drill-in and new worktree)
@@ -499,7 +500,7 @@ function M._showWorktrees(repo)
 
   chooser:placeholderText("Select or type new worktree name for " .. repo .. "...")
   chooser:choices(buildChoices(""))
-  chooser:show()
+  utils.showChooser(chooser)
 end
 
 -- Open/create worktree and launch Ghostty
@@ -517,22 +518,22 @@ function M._openWorktree(repo, name, needsCreate)
       end
     end
     if not worktreeDir then
-      hs.alert.show("Worktree not found: " .. name)
+      utils.alert("Worktree not found: " .. name)
       return
     end
   end
 
   if needsCreate then
-    hs.alert.show("Creating worktree " .. repo .. "/" .. name .. "...")
+    utils.alert("Creating worktree " .. repo .. "/" .. name .. "...")
     local task = hs.task.new(SCRIPT, function(exitCode, stdout, stderr)
       if exitCode ~= 0 then
-        hs.alert.show("Failed to create worktree")
+        utils.alert("Failed to create worktree")
         print("wt-git.sh create error: " .. (stderr or ""))
         return
       end
       local ok, result = pcall(hs.json.decode, stdout)
       if not ok or not result or result.error then
-        hs.alert.show("Error: " .. (result and result.error or "parse error"))
+        utils.alert("Error: " .. (result and result.error or "parse error"))
         return
       end
       worktreeDir = result.path
@@ -557,18 +558,18 @@ function M._launchGhostty(dir, repo, name)
 
   local ok, result, descriptor = hs.osascript.applescript(script)
   if not ok then
-    hs.alert.show("Failed to launch Ghostty")
+    utils.alert("Failed to launch Ghostty")
     print("AppleScript error: " .. tostring(descriptor))
     return
   end
 
-  hs.alert.show(repo .. "/" .. name .. " ready")
+  utils.alert(repo .. "/" .. name .. " ready")
 end
 
 -- Cleanup worktree
 function M.cleanup(repo, name, remote)
   if name == "main" then
-    hs.alert.show("Cannot delete main")
+    utils.alert("Cannot delete main")
     return
   end
 
@@ -583,7 +584,7 @@ function M.cleanup(repo, name, remote)
   end
   print("[worktree-cleanup] info result: " .. hs.inspect(info))
   if not info then
-    hs.alert.show("Could not get worktree info")
+    utils.alert("Could not get worktree info")
     return
   end
 
@@ -617,25 +618,25 @@ function M.cleanup(repo, name, remote)
   if button ~= "Delete" then return end
 
   if remote then
-    hs.alert.show("Removing " .. label .. "...")
+    utils.alert("Removing " .. label .. "...")
     local cmd = string.format("ssh -o ConnectTimeout=3 %s '%s remove %s %s'", remote.ssh, REMOTE_SCRIPT, repo, name)
     local _, ok = hs.execute(cmd)
     if ok then
-      hs.alert.show(label .. " removed")
+      utils.alert(label .. " removed")
     else
-      hs.alert.show("Failed to remove remote worktree")
+      utils.alert("Failed to remove remote worktree")
     end
   else
     M._closeGhosttyByCwd(repo, name)
 
-    hs.alert.show("Removing " .. label .. "...")
+    utils.alert("Removing " .. label .. "...")
     local task = hs.task.new(SCRIPT, function(exitCode, stdout, stderr)
       if exitCode ~= 0 then
-        hs.alert.show("Failed to remove worktree")
+        utils.alert("Failed to remove worktree")
         print("wt-git.sh remove error: " .. (stderr or ""))
         return
       end
-      hs.alert.show(label .. " removed")
+      utils.alert(label .. " removed")
     end, {"remove", repo, name})
     task:start()
   end
@@ -682,7 +683,7 @@ function M._openRemote(host, repo, name)
       end
     end
     if not remoteDir then
-      hs.alert.show("Remote worktree not found: " .. name)
+      utils.alert("Remote worktree not found: " .. name)
       return
     end
   end
@@ -699,12 +700,12 @@ function M._openRemote(host, repo, name)
 
   local ok, result, descriptor = hs.osascript.applescript(script)
   if not ok then
-    hs.alert.show("Failed to launch Ghostty")
+    utils.alert("Failed to launch Ghostty")
     print("AppleScript error: " .. tostring(descriptor))
     return
   end
 
-  hs.alert.show(host.name .. ":" .. repo .. "/" .. name .. " ready")
+  utils.alert(host.name .. ":" .. repo .. "/" .. name .. " ready")
 end
 
 return M
