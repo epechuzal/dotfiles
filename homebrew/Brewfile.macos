@@ -12,8 +12,6 @@ cask "1password"
 cask "1password-cli"
 # Application launcher and productivity software
 cask "alfred"
-# Enable Windows-like alt-tab
-cask "alt-tab"
 # Tool to flash OS images to SD cards & USB drives
 cask "balenaetcher"
 # Terminal-based AI coding assistant
