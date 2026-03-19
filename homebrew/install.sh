@@ -34,4 +34,9 @@ if [ "$(uname -s)" = "Darwin" ] && [ -f "$DOTFILESDIR/homebrew/Brewfile.macos" ]
   brew bundle --file="$DOTFILESDIR/homebrew/Brewfile.macos"
 fi
 
+if [ "$DOTFILES_MACHINE_TYPE" = "personal" ] && [ -f "$DOTFILESDIR/homebrew/Brewfile.personal" ]; then
+  echo "  Installing personal packages."
+  brew bundle --file="$DOTFILESDIR/homebrew/Brewfile.personal"
+fi
+
 exit 0

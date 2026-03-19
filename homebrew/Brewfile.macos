@@ -12,20 +12,10 @@ cask "1password"
 cask "1password-cli"
 # Application launcher and productivity software
 cask "alfred"
-# Tool to flash OS images to SD cards & USB drives
-cask "balenaetcher"
 # Terminal-based AI coding assistant
 cask "claude-code"
-# Browse and analyze Claude Code conversation history
-cask "claude-code-history-viewer"
-# Tool to run Windows software
-cask "crossover"
-# Voice and text chat software
-cask "discord"
 # App to build and share containerised applications and microservices
 cask "docker-desktop"
-# Fork of the DOSBox project
-cask "dosbox-x-app"
 # Web browser
 cask "google-chrome"
 # GPU-accelerated terminal emulator
@@ -38,42 +28,24 @@ cask "hammerspoon"
 cask "keepingyouawake"
 # Keyboard configurator for ZSA keyboards (Voyager, Moonlander, etc.)
 cask "keymapp"
-# Privacy-first, open-source platform for knowledge sharing and management
-cask "logseq"
 # Knowledge base that works on top of a local folder of plain text Markdown files
 cask "obsidian"
-# WebKit based web browser
-cask "orion"
 # Collaboration platform for API development
 cask "postman"
-# Frontend for emulators, game engines and media players (OpenGL graphics API)
-cask "retroarch"
 # Tool to reverse the direction of scrolling
 cask "scroll-reverser"
 # Store SSH keys in the Secure Enclave
 cask "secretive"
 # Music streaming service
 cask "spotify"
-# Video game digital distribution service
-cask "steam"
-# VPN client for secure internet access and private browsing
-cask "surfshark"
 # Mesh VPN based on WireGuard
 cask "tailscale-app"
 # Native GUI for Homebrew package management
 cask "taphouse"
-# Window manager
-cask "tiles"
-# Virtual machines UI using QEMU
-cask "utm"
 # Open-source code editor
 cask "visual-studio-code"
-# Multimedia player
-cask "vlc"
 # JavaScript IDE
 cask "webstorm"
-# Native desktop client for WhatsApp
-cask "whatsapp"
 # Put the output from any script or program into your macOS Menu Bar
 cask "xbar"
 # Gecko based web browser

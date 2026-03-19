@@ -15,7 +15,7 @@ hammerspoon/local.lua
 # Machine-specific xbar config
 xbar/infra-dashboard.local.conf
 
-# Work-specific config (stays local, not pushed to remote)
-str/
+# Work-specific functions (company-specific, stays local)
+work/functions.zsh
 .superpowers/
 hammerspoon/scripts/sf-icon

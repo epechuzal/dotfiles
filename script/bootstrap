@@ -147,6 +147,41 @@ if [ "$(uname -s)" != "Darwin" ]; then
   fi
 fi
 
+setup_machine_type () {
+  # Check if DOTFILES_MACHINE_TYPE is already set (e.g. from ~/.localrc)
+  if [ -f "$HOME/.localrc" ]; then
+    existing=$(grep '^export DOTFILES_MACHINE_TYPE=' "$HOME/.localrc" 2>/dev/null | tail -1 | cut -d= -f2)
+    if [ -n "$existing" ]; then
+      export DOTFILES_MACHINE_TYPE="$existing"
+      success "machine type: $DOTFILES_MACHINE_TYPE (from ~/.localrc)"
+      return
+    fi
+  fi
+
+  info 'setup machine type'
+  user ' - Is this a [w]ork or [p]ersonal machine?'
+  read -n 1 machine_type
+  echo ''
+
+  case "$machine_type" in
+    w|W ) export DOTFILES_MACHINE_TYPE=work ;;
+    p|P ) export DOTFILES_MACHINE_TYPE=personal ;;
+    * )
+      fail "invalid choice: $machine_type (expected w or p)"
+      ;;
+  esac
+
+  # Persist to ~/.localrc
+  if [ -f "$HOME/.localrc" ]; then
+    echo "export DOTFILES_MACHINE_TYPE=$DOTFILES_MACHINE_TYPE" >> "$HOME/.localrc"
+  else
+    echo "export DOTFILES_MACHINE_TYPE=$DOTFILES_MACHINE_TYPE" > "$HOME/.localrc"
+  fi
+
+  success "machine type: $DOTFILES_MACHINE_TYPE (saved to ~/.localrc)"
+}
+
+setup_machine_type
 setup_gitconfig
 install_dotfiles
 

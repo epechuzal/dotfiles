@@ -39,6 +39,9 @@ done
 
 export DOTFILESDIR=$dotfilesDirectory
 
+# Load machine type and other env vars
+[ -f "$HOME/.localrc" ] && . "$HOME/.localrc"
+
 # Set macOS defaults
 $DOTFILESDIR/macos/set-defaults.sh
 

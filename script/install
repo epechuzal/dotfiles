@@ -6,8 +6,27 @@ set -e
 
 cd "$(dirname $0)"/..
 
-# Homebrew first — other topics depend on packages it installs (node, etc.)
-sh -c ./homebrew/install.sh
+# Ordered installers — each depends on the one before it:
+#   homebrew → zsh (shell theme) → node (nvm/npm) → claude (needs node + npm)
+ORDERED=(
+  ./homebrew/install.sh
+  ./zsh/install.sh
+  ./node/install.sh
+  ./claude/install.sh
+)
 
-# find the remaining installers and run them iteratively
-find . -name install.sh -not -path ./homebrew/install.sh | while read installer ; do sh -c "${installer}" ; done
+for installer in "${ORDERED[@]}"; do
+  echo "» $installer"
+  sh -c "$installer"
+done
+
+# Run remaining installers (order doesn't matter)
+for installer in $(find . -name install.sh | sort); do
+  skip=false
+  for ordered in "${ORDERED[@]}"; do
+    [ "$installer" = "$ordered" ] && skip=true
+  done
+  $skip && continue
+  echo "» $installer"
+  sh -c "$installer"
+done

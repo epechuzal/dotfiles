@@ -80,13 +80,18 @@ The `zsh/zshrc.symlink` loads configuration in this specific order:
 
 ### Homebrew Package Management
 
-- **Global Brewfile**: Located at `~/.Brewfile` (managed as Brewfile.symlink)
-- **Topic-specific**: Each topic can have `install.sh` that installs packages
-- **STR Brewfile**: Optional work-specific packages in `str/Brewfile` (requires `$INSTALL_STR_BREWFILE` env var)
+- **Global Brewfile**: Located at `~/.Brewfile` (managed as Brewfile.symlink) — cross-platform CLI tools
+- **macOS Brewfile**: `homebrew/Brewfile.macos` — apps for all Macs (work + personal)
+- **Personal Brewfile**: `homebrew/Brewfile.personal` — personal-only apps (games, media, etc.)
+- **Work Brewfile**: `work/Brewfile` — work-specific tools (terraform, Slack, Zoom, etc.)
+- **Machine type**: `DOTFILES_MACHINE_TYPE` in `~/.localrc` (set to `work` or `personal` during bootstrap)
 
 The `homebrew/install.sh` script:
 - Installs Homebrew if not present
 - Runs `brew bundle --global` to install from `~/.Brewfile`
+- Installs macOS packages on Darwin
+- Installs personal packages when `DOTFILES_MACHINE_TYPE=personal`
+- Work packages installed by `work/install.sh` when `DOTFILES_MACHINE_TYPE=work`
 
 ### Git Configuration
 

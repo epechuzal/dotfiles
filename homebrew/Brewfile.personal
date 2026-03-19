@@ -1,0 +1,11 @@
+# Personal-only packages (DOTFILES_SETUP=personal)
+cask "balenaetcher"
+cask "crossover"
+cask "discord"
+cask "dosbox-x-app"
+cask "retroarch"
+cask "steam"
+cask "surfshark"
+cask "utm"
+cask "vlc"
+cask "whatsapp"

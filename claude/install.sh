@@ -68,36 +68,30 @@ else
   echo "  pyright already installed"
 fi
 
-# Claude Code LSP plugins
+# Claude Code plugins and extensions
 if command -v claude &>/dev/null; then
   PLUGINS_FILE="$CLAUDE_DIR/plugins/installed_plugins.json"
 
-  if ! grep -q "typescript-lsp" "$PLUGINS_FILE" 2>/dev/null; then
-    claude plugin install typescript-lsp@claude-plugins-official
-    echo "  installed typescript-lsp plugin"
-  else
-    echo "  typescript-lsp plugin already installed"
-  fi
+  install_plugin() {
+    local name="$1"
+    if ! grep -q "$name" "$PLUGINS_FILE" 2>/dev/null; then
+      if claude plugin install "${name}@claude-plugins-official" 2>/dev/null; then
+        echo "  installed $name plugin"
+      else
+        return 1
+      fi
+    else
+      echo "  $name plugin already installed"
+    fi
+  }
 
-  if ! grep -q "pyright-lsp" "$PLUGINS_FILE" 2>/dev/null; then
-    claude plugin install pyright-lsp@claude-plugins-official
-    echo "  installed pyright-lsp plugin"
-  else
-    echo "  pyright-lsp plugin already installed"
-  fi
+  plugin_failed=false
+  for plugin in typescript-lsp pyright-lsp code-simplifier superpowers; do
+    install_plugin "$plugin" || plugin_failed=true
+  done
 
-  if ! grep -q "code-simplifier" "$PLUGINS_FILE" 2>/dev/null; then
-    claude plugin install code-simplifier@claude-plugins-official
-    echo "  installed code-simplifier plugin"
-  else
-    echo "  code-simplifier plugin already installed"
-  fi
-
-  if ! grep -q "superpowers" "$PLUGINS_FILE" 2>/dev/null; then
-    claude plugin install superpowers@claude-plugins-official
-    echo "  installed superpowers plugin"
-  else
-    echo "  superpowers plugin already installed"
+  if [ "$plugin_failed" = true ]; then
+    echo "  ⚠ Some plugins failed to install. Log into Claude Code first (run 'claude') then re-run dot."
   fi
 
   # GSD (Get Shit Done) — spec-driven development framework
