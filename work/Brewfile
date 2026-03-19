@@ -2,10 +2,8 @@
 # Keep only things not already in the base or macos Brewfiles.
 # Curate this list when you change jobs.
 brew "tfenv"
-brew "pipenv"
 brew "awscli"
 brew "openjdk"
 
 cask "tuple"
-cask "zoom"
 cask "slack"
