@@ -3,6 +3,7 @@ brew "whisper-cpp"
 brew "yt-dlp"
 
 cask "balenaetcher"
+cask "scroll-reverser"
 cask "crossover"
 cask "discord"
 cask "dosbox-x-app"

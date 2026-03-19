@@ -28,8 +28,6 @@ cask "keepingyouawake"
 cask "obsidian"
 # Collaboration platform for API development
 cask "postman"
-# Tool to reverse the direction of scrolling
-cask "scroll-reverser"
 # Store SSH keys in the Secure Enclave
 cask "secretive"
 # Music streaming service
