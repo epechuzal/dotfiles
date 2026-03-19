@@ -1,7 +1,5 @@
 tap "jhlee0409/tap"
 tap "letsur-dev/claude-peak", "https://github.com/letsur-dev/claude-peak.git"
-# Mac App Store command-line interface
-brew "mas"
 # Why is this running?
 brew "witr"
 # Claude Max subscription usage monitor for macOS menu bar

@@ -2,8 +2,6 @@
 brew "bash"
 # GNU File, Shell, and Text utilities
 brew "coreutils"
-# High-performance JSON to GRON converter
-brew "fastgron"
 # Play, record, convert, and stream audio and video
 brew "ffmpeg"
 # GitHub command-line tool
@@ -22,7 +20,3 @@ brew "rsync"
 brew "wakeonlan"
 # Internet file retriever
 brew "wget"
-# Port of OpenAI's Whisper model in C/C++
-brew "whisper-cpp"
-# Feature-rich command-line audio/video downloader
-brew "yt-dlp"
